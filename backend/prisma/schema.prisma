@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String     @id @default(uuid())
+  name      String
+  code      String     @unique
+  address   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  users     User[]
+  purifiers Purifier[]
+}
+
+model User {
+  id             String       @id @default(uuid())
+  name           String
+  email          String       @unique
+  passwordHash   String
+  role           String       @default("ADMIN") // ADMIN, TECHNICAL_HEAD, MAINTENANCE_STAFF, VIEWER
+  status         String       @default("ACTIVE") // ACTIVE, INACTIVE
+  lastLogin      DateTime?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Purifier {
+  id                 String              @id @default(uuid())
+  purifierCode       String              @unique // e.g. WP-001 or PUR-001
+  name               String              // e.g. Main Administrative Center Purifier
+  location           String              // e.g. Main Building - Block A
+  building           String              // e.g. Engineering Block
+  floor              String              // e.g. Ground Floor, Room 102
+  organizationId     String
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId           String?             @unique // e.g. PICO-W-001
+  status             String              @default("HEALTHY") // HEALTHY, WARNING, CRITICAL, OFFLINE, MAINTENANCE_DUE
+  isPhysicalHardware Boolean             @default(false) // true for WP-001
+  modelType          String              @default("Commercial RO+UV+UF Retrofit")
+  installationDate   DateTime            @default(now())
+  lastMaintenance    DateTime?
+  nextMaintenanceDue DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  sensorReadings     SensorReading[]
+  filters            Filter[]
+  predictions        Prediction[]
+  alerts             Alert[]
+  maintenanceRecords MaintenanceRecord[]
+  aiDetections       AiDetectionRecord[]
+  device             Device?
+  cameraDevice       CameraDevice?
+}
+
+model SensorReading {
+  id          String   @id @default(uuid())
+  purifierId  String
+  purifier    Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  timestamp   DateTime @default(now())
+  ph          Float    // 6.5 - 8.5 normal
+  tds         Float    // ppm
+  turbidity   Float    // NTU
+  temperature Float    // °C
+  flowRate    Float    // L/min
+  waterLevel  Float    @default(80.0) // %
+  wqiScore    Float    @default(90.0) // 0-100 score
+  wqiStatus   String   @default("EXCELLENT") // EXCELLENT, GOOD, FAIR, POOR, CRITICAL
+  source      String   @default("SIMULATION") // HARDWARE_PICO_W or SIMULATION
+
+  @@index([purifierId, timestamp])
+}
+
+model Filter {
+  id                         String   @id @default(uuid())
+  purifierId                 String
+  purifier                   Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  filterType                 String   @default("Composite Carbon + RO Membrane")
+  installationDate           DateTime @default(now())
+  healthScore                Float    @default(100.0) // 0 - 100%
+  degradationRate            Float    @default(0.4) // % degradation per day
+  estimatedRemainingLifeDays Int      @default(90) // RUL
+  flowResistanceIndex        Float    @default(1.0) // 1.0 (clean) -> 3.5 (clogged)
+  dailyUsageLiters           Float    @default(140.0)
+  lastReplacementDate        DateTime @default(now())
+  predictedReplacementDate   DateTime?
+  status                     String   @default("OPTIMAL") // OPTIMAL, GOOD, DEGRADED, CRITICAL_REPLACE
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model Prediction {
+  id               String   @id @default(uuid())
+  purifierId       String
+  purifier         Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  timestamp        DateTime @default(now())
+  predictionType   String   // FILTER_DEGRADATION, TDS_BREAKTHROUGH, FOULING_RISK, RUL_ESTIMATE
+  riskLevel        String   @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  predictedRulDays Int      // Predicted remaining useful days
+  predictedValue   Float?   // Predicted metric value
+  confidence       Float    @default(0.92) // 0.0 - 1.0
+  failureMode      String   // e.g. "Sediment particulate buildup causing 18% flow reduction"
+  recommendation   String   // e.g. "Schedule pre-filter flush within 14 days"
+  isPrototype      Boolean  @default(true)
+
+  @@index([purifierId, timestamp])
+}
+
+model Alert {
+  id             String   @id @default(uuid())
+  purifierId     String
+  purifier       Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  severity       String   // CRITICAL, WARNING, INFO, PREDICTIVE, OFFLINE
+  type           String   // REACTIVE vs PREDICTIVE
+  category       String   // WATER_QUALITY, FILTER_HEALTH, HARDWARE_ERROR, ANOMALY, CONTAMINANT
+  title          String
+  message        String
+  recommendation String
+  timestamp      DateTime @default(now())
+  isAcknowledged Boolean  @default(false)
+  isResolved     Boolean  @default(false)
+
+  @@index([purifierId, timestamp])
+}
+
+model MaintenanceRecord {
+  id             String    @id @default(uuid())
+  maintenanceCode String   @default("MNT-1001")
+  purifierId     String
+  purifier       Purifier  @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  date           DateTime  @default(now())
+  scheduledDate  DateTime  @default(now())
+  issue          String    @default("Routine Checkup & Membrane Flush")
+  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  type           String    // ROUTINE_CHECKUP, FILTER_REPLACEMENT, MEMBRANE_FLUSH, SENSOR_CALIBRATION, EMERGENCY_REPAIR
+  technician     String
+  cost           Float     @default(0.0)
+  notes          String
+  status         String    @default("COMPLETED") // PENDING, SCHEDULED, IN_PROGRESS, COMPLETED
+  filterReplaced Boolean   @default(false)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model AiDetectionRecord {
+  id              String   @id @default(uuid())
+  purifierId      String
+  purifier        Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  timestamp       DateTime @default(now())
+  capturedImageUrl String  @default("/sample-water-scan.jpg")
+  detectedObject  String   // Clean Water, Insect, Worm, Algae, Unknown Contaminant
+  confidence      Float    // e.g. 94.2 %
+  riskLevel       String   // SAFE, WARNING, CRITICAL
+  boundingBoxJson String?  // JSON string e.g. [{"x": 120, "y": 80, "w": 200, "h": 160, "label": "Algae"}]
+  recommendation  String
+  status          String   @default("REVIEWED") // REVIEWED, ACTION_REQUIRED, RESOLVED
+  createdAt       DateTime @default(now())
+
+  @@index([purifierId, timestamp])
+}
+
+model SystemSetting {
+  id             String   @id @default(uuid())
+  organizationId String
+  phMin          Float    @default(6.5)
+  phMax          Float    @default(8.5)
+  tdsMax         Float    @default(300.0)
+  turbidityMax   Float    @default(5.0)
+  tempMin        Float    @default(10.0)
+  tempMax        Float    @default(35.0)
+  filterWarning  Float    @default(40.0)
+  filterCritical Float    @default(20.0)
+  emailAlerts    Boolean  @default(true)
+  smsAlerts      Boolean  @default(false)
+  pushAlerts     Boolean  @default(true)
+  apiToken       String   @default("aquapure_iot_live_sec_token_983742")
+  updatedAt      DateTime @updatedAt
+}
+
+model Device {
+  id              String   @id @default(uuid())
+  deviceId        String   @unique // e.g. PICO-W-001
+  purifierId      String   @unique
+  purifier        Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  deviceType      String   @default("Raspberry Pi Pico W Retrofit")
+  firmwareVersion String   @default("v2.4.1-pico-w")
+  ipAddress       String   @default("192.168.1.105")
+  macAddress      String   @default("28:CD:C1:04:8A:2F")
+  wifiRssi        Int      @default(-58) // dBm
+  lastSeen        DateTime @default(now())
+  status          String   @default("ONLINE") // ONLINE, OFFLINE, DEGRADED
+  oledStatus      String   @default("ONLINE - DISP 128x64")
+  ledStatus       String   @default("GREEN_NORMAL") // GREEN_NORMAL, YELLOW_WARNING, RED_CRITICAL
+  buzzerStatus    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CameraDevice {
+  id                     String   @id @default(uuid())
+  deviceId               String   @unique // e.g. ESP32-CAM-001
+  purifierId             String   @unique
+  purifier               Purifier @relation(fields: [purifierId], references: [id], onDelete: Cascade)
+  resolution             String   @default("1600x1200 (UXGA OV2640)")
+  streamUrl              String   @default("http://192.168.1.120:81/stream")
+  lastSnapshotUrl        String?
+  status                 String   @default("SIMULATED_STANDBY") // ONLINE, SIMULATED_STANDBY, OFFLINE
+  opticalInspectionStatus String  @default("CLEAR - NO LEAKS DETECTED")
+  lastSeen               DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}

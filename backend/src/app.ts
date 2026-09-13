@@ -5,7 +5,7 @@ import routes from './routes';
 const app = express();
 
 app.use(cors({
-  origin: '*',
+  origin: '*', 
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   credentials: true,
 }));

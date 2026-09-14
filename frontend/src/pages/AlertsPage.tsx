@@ -28,7 +28,7 @@ export const AlertsPage: React.FC = () => {
 
   // Assign Technician Modal
   const [assignModalAlert, setAssignModalAlert] = useState<AlertItem | null>(null);
-  const [technicianName, setTechnicianName] = useState('Rajesh Sharma');
+  const [technicianName, setTechnicianName] = useState('Field Support Unit');
   const [assignSuccess, setAssignSuccess] = useState(false);
 
   const fetchAlerts = async () => {

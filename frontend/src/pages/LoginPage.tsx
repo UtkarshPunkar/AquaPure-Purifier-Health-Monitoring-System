@@ -102,6 +102,22 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   );
 };
 
+// Dynamic Password Strength Calculator for Sign Up
+const getPasswordStrength = (pass: string) => {
+  if (!pass) return { score: 0, label: '', color: 'bg-slate-300 dark:bg-slate-700', text: 'text-slate-400', width: '0%' };
+  let score = 0;
+  if (pass.length >= 6) score++;
+  if (pass.length >= 8) score++;
+  if (/[A-Z]/.test(pass)) score++;
+  if (/[0-9]/.test(pass)) score++;
+  if (/[^A-Za-z0-9]/.test(pass)) score++;
+
+  if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-gradient-to-r from-rose-500 to-amber-500', text: 'text-rose-400', width: '25%' };
+  if (score <= 3) return { score: 2, label: 'Moderate', color: 'bg-gradient-to-r from-[#00E5FF] to-sky-400', text: 'text-sky-400', width: '60%' };
+  if (score === 4) return { score: 3, label: 'Strong', color: 'bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1]', text: 'text-[#00E5FF]', width: '85%' };
+  return { score: 4, label: 'Ultra Pure Shielded', color: 'bg-gradient-to-r from-[#00E5FF] via-[#00B0FF] to-emerald-400', text: 'text-[#00E5FF]', width: '100%' };
+};
+
 export const LoginPage: React.FC = () => {
   const { login, signUp, quickLogin, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -131,8 +147,8 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   // Login Form State
-  const [email, setEmail] = useState('mithilesh@aquapure.edu');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('admin@aquapure.edu');
+  const [password, setPassword] = useState('Admin@123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -216,7 +232,7 @@ export const LoginPage: React.FC = () => {
     setSignupError(null);
     setIsSignupLoading(true);
     try {
-      await signUp(signupName, signupEmail, signupPassword, signupRole, signupOrg || 'Apex Campus');
+      await signUp(signupName, signupEmail, signupPassword, signupRole, signupOrg || 'S.B. Jain Campus');
       setIsAuthModalOpen(false);
       navigate('/');
     } catch (err: any) {
@@ -260,20 +276,6 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070d19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 selection:bg-[#4FC3F7] selection:text-slate-950 relative overflow-x-clip">
       {/* =========================================================================
-          RADIANT AMBIENT GLOWING BEAMS & ORBS (Clean Background without Grid Lines)
-         ========================================================================= */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Top Radiant Center Glow Beam */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[750px] sm:w-[1050px] h-[550px] bg-gradient-to-b from-[#4FC3F7]/30 via-sky-500/20 to-transparent blur-[120px] rounded-full pointer-events-none animate-pulse-slow" />
-        {/* Secondary Cyan Hero Ambient Light */}
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 w-[480px] sm:w-[700px] h-[300px] bg-[#4FC3F7]/25 blur-[90px] rounded-full pointer-events-none" />
-        {/* Floating Mid-Section Glow Spheres */}
-        <div className="absolute top-[35%] -left-32 w-[450px] h-[450px] bg-[#4FC3F7]/15 dark:bg-[#4FC3F7]/10 blur-[110px] rounded-full pointer-events-none animate-float-slow" />
-        <div className="absolute top-[55%] -right-32 w-[500px] h-[500px] bg-blue-600/15 dark:bg-blue-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-glow" />
-        <div className="absolute top-[75%] left-1/4 w-[600px] h-[400px] bg-[#4FC3F7]/15 dark:bg-[#4FC3F7]/10 blur-[130px] rounded-full pointer-events-none" />
-      </div>
-
-      {/* =========================================================================
           HEADER / NAVBAR (Sticky Blended Glassmorphism: Home, Features, Help, Contacts)
          ========================================================================= */}
       <header className={`sticky top-0 z-50 glass-header ${isScrolled ? 'scrolled' : ''}`}>
@@ -281,9 +283,11 @@ export const LoginPage: React.FC = () => {
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Brand Logo */}
             <a href="#home" className="flex items-center gap-3 group interactive-btn">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0288D1] via-[#29B6F6] to-[#4FC3F7] flex items-center justify-center text-slate-950 shadow-lg shadow-[#4FC3F7]/30 group-hover:scale-105 group-hover:shadow-[#4FC3F7]/50 transition-all duration-300">
-                <Droplets size={22} className="stroke-[2.5]" />
-              </div>
+              <img
+                src="/aquapure-logo.jpg"
+                alt="AquaPure Logo"
+                className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-sky-500/20 group-hover:scale-105 group-hover:shadow-sky-500/40 transition-all duration-300"
+              />
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white">
@@ -475,6 +479,7 @@ export const LoginPage: React.FC = () => {
               </button>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -728,22 +733,12 @@ export const LoginPage: React.FC = () => {
             <ScrollReveal direction="up" delay={0}>
               <div className="h-full p-6 rounded-2xl bg-white dark:bg-[#0e172a] border border-slate-200/80 dark:border-slate-800 shadow-sm interactive-card card-glow-hover flex flex-col justify-between">
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">
-                    01
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">
-                    IoT Node Provisioning
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                    Learn how to flash firmware to your Pico W or ESP32 node and connect telemetry to the `/api/iot/sensor-data` endpoint.
-                  </p>
+                  <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">01</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">IoT Node Provisioning</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">Learn how to flash firmware to your Pico W or ESP32 node and connect telemetry to the `/api/iot/sensor-data` endpoint.</p>
                 </div>
-                <button
-                  onClick={() => handleOpenAuth('login')}
-                  className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group"
-                >
-                  <span>View Node Setup Docs</span>
-                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                <button onClick={() => handleOpenAuth('login')} className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group">
+                  <span>View Node Setup Docs</span><ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </ScrollReveal>
@@ -751,23 +746,12 @@ export const LoginPage: React.FC = () => {
             <ScrollReveal direction="up" delay={100}>
               <div className="h-full p-6 rounded-2xl bg-white dark:bg-[#0e172a] border border-slate-200/80 dark:border-slate-800 shadow-sm interactive-card card-glow-hover flex flex-col justify-between">
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">
-                    02
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">
-                    Sensor Thresholds &amp; Alerts
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                    Configure custom safety thresholds for potable water (pH 6.5 - 8.5, TDS &lt; 300 PPM, Turbidity &lt; 5 NTU)
-                    with real-time technician dispatch.
-                  </p>
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">02</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Sensor Thresholds &amp; Alerts</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">Configure custom safety thresholds for potable water (pH 6.5 - 8.5, TDS &lt; 300 PPM, Turbidity &lt; 5 NTU) with real-time technician dispatch.</p>
                 </div>
-                <button
-                  onClick={() => handleOpenAuth('login')}
-                  className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group"
-                >
-                  <span>Configure Threshold Rules</span>
-                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                <button onClick={() => handleOpenAuth('login')} className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group">
+                  <span>Configure Threshold Rules</span><ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </ScrollReveal>
@@ -775,23 +759,12 @@ export const LoginPage: React.FC = () => {
             <ScrollReveal direction="up" delay={200}>
               <div className="h-full p-6 rounded-2xl bg-white dark:bg-[#0e172a] border border-slate-200/80 dark:border-slate-800 shadow-sm interactive-card card-glow-hover flex flex-col justify-between">
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">
-                    03
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">
-                    Emergency Contamination Lock
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                    Instructions for automated solenoid valve isolation upon critical bacterial or heavy chemical detection
-                    to prevent hazardous distribution.
-                  </p>
+                  <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-4 font-bold text-sm shadow-xs">03</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Emergency Contamination Lock</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">Instructions for automated solenoid valve isolation upon critical bacterial or heavy chemical detection to prevent hazardous distribution.</p>
                 </div>
-                <button
-                  onClick={() => handleOpenAuth('login')}
-                  className="text-xs font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group"
-                >
-                  <span>Read Emergency Protocol</span>
-                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                <button onClick={() => handleOpenAuth('login')} className="text-xs font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5 hover:underline cursor-pointer pt-2 group">
+                  <span>Read Emergency Protocol</span><ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </ScrollReveal>
@@ -845,9 +818,11 @@ export const LoginPage: React.FC = () => {
                   {/* Left: Brand Logo & Inquiries Subtitle */}
                   <div className="max-w-md">
                     <div className="flex items-center gap-3 group mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-lg shadow-sky-600/30 group-hover:scale-105 transition-transform duration-300">
-                        <Droplets size={24} className="stroke-[2.5]" />
-                      </div>
+                      <img
+                        src="/aquapure-logo.jpg"
+                        alt="AquaPure Logo"
+                        className="w-11 h-11 rounded-2xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-sky-600/30 group-hover:scale-105 transition-transform duration-300"
+                      />
                       <span className="font-extrabold text-2xl sm:text-3xl tracking-tight text-slate-900 dark:text-white">
                         Aqua<span className="text-sky-600 dark:text-sky-400">Pure</span>
                       </span>
@@ -1037,356 +1012,450 @@ export const LoginPage: React.FC = () => {
       </footer>
 
       {/* =========================================================================
-          AUTHENTICATION MODAL (Tabbed: Sign In & Create Account)
+          AUTHENTICATION MODAL (Enhanced with Electric Blue Animations & Effects)
+         ========================================================================= */}
+      {/* =========================================================================
+          AUTHENTICATION & SIGN UP MODAL (Flanked by Dual-Side Electric Blue Telemetry Wings)
          ========================================================================= */}
       {isAuthModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-2xl animate-fade-in duration-200 overflow-y-auto"
+          onClick={() => setIsAuthModalOpen(false)}
+        >
+          {/* Ambient Radiant Blue Glow Behind Modal */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-tr from-[#0288D1]/30 via-[#00E5FF]/20 to-blue-600/25 rounded-full blur-[130px] pointer-events-none animate-blue-aura" />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-[#00E5FF]/20 rounded-full blur-[90px] pointer-events-none animate-pulse-glow" />
+
+          {/* Screen-Edge Holographic Rail Effects on Both Left & Right Sides */}
+          <div className="fixed left-5 top-1/4 bottom-1/4 w-10 pointer-events-none hidden lg:block opacity-80">
+            <div className="absolute left-1 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#00E5FF]/70 to-transparent" />
+            <div className="absolute left-0 top-0 h-24 w-px bg-gradient-to-b from-transparent via-[#00E5FF] to-transparent shadow-[0_0_12px_#00E5FF] animate-side-laser-down" />
+            <div className="absolute left-0 top-1/4 w-3 h-3 rounded-full border border-[#00E5FF] shadow-[0_0_12px_#00E5FF] animate-ping" />
+            <div className="absolute left-0 top-1/2 w-2 h-2 rounded-full bg-[#00E5FF] shadow-[0_0_10px_#00E5FF] animate-pulse" />
+            <div className="absolute left-0 top-3/4 w-3 h-3 rounded-full border border-[#0288D1] shadow-[0_0_10px_#0288D1] animate-pulse" />
+            <div className="absolute left-1 top-1/4 ml-3 w-6 border-t border-[#00E5FF]/40" />
+            <div className="absolute left-1 top-1/2 ml-3 w-4 border-t border-[#00E5FF]/30" />
+            <div className="absolute left-1 top-3/4 ml-3 w-6 border-t border-[#0288D1]/40" />
+          </div>
+          <div className="fixed right-5 top-1/4 bottom-1/4 w-10 pointer-events-none hidden lg:block opacity-80">
+            <div className="absolute right-1 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#00E5FF]/70 to-transparent" />
+            <div className="absolute right-0 top-0 h-24 w-px bg-gradient-to-t from-transparent via-[#00E5FF] to-transparent shadow-[0_0_12px_#00E5FF] animate-side-laser-up" />
+            <div className="absolute right-0 top-1/4 w-3 h-3 rounded-full border border-[#00E5FF] shadow-[0_0_12px_#00E5FF] animate-ping" />
+            <div className="absolute right-0 top-1/2 w-2 h-2 rounded-full bg-[#00E5FF] shadow-[0_0_10px_#00E5FF] animate-pulse" />
+            <div className="absolute right-0 top-3/4 w-3 h-3 rounded-full border border-[#0288D1] shadow-[0_0_10px_#0288D1] animate-pulse" />
+            <div className="absolute right-1 top-1/4 mr-3 w-6 border-t border-[#00E5FF]/40" />
+            <div className="absolute right-1 top-1/2 mr-3 w-4 border-t border-[#00E5FF]/30" />
+            <div className="absolute right-1 top-3/4 mr-3 w-6 border-t border-[#0288D1]/40" />
+          </div>
+
+          {/* Triple-Column Centered Modal Layout: [LEFT WING] + [SIGN IN / SIGN UP CARD] + [RIGHT WING] */}
           <div
-            className="w-full max-w-md bg-white dark:bg-[#0e172a] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 relative overflow-hidden animate-scale-up"
+            className="relative z-10 flex items-center justify-center gap-5 max-w-6xl w-full my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Close Button */}
-            <button
-              onClick={() => setIsAuthModalOpen(false)}
-              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer interactive-btn"
-            >
-              <X size={18} />
-            </button>
+            {/* -------------------------------------------------------------
+                CENTER MAIN SIGN IN / SIGN UP MODAL CARD
+               ------------------------------------------------------------- */}
+            <div className="relative w-full max-w-md p-[1.5px] rounded-3xl bg-gradient-to-b from-[#00E5FF] via-[#0288D1] to-[#01579B] shadow-[0_0_50px_rgba(2,136,209,0.35),0_20px_50px_rgba(0,0,0,0.6)] animate-scale-up overflow-hidden">
+              {/* Modal Body */}
+              <div className="bg-white/95 dark:bg-[#071124]/95 backdrop-blur-2xl rounded-[calc(1.5rem-1.5px)] p-6 sm:p-8 relative overflow-hidden">
+                {/* Electric Blue Laser Scanline Pulse on Card */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent shadow-[0_0_15px_#00E5FF] animate-blue-scanline pointer-events-none" />
 
-            {/* Modal Header & Brand Icon */}
-            <div className="text-center mb-6">
-              <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-sky-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-sky-600/25 mb-3 animate-pulse-glow">
-                <Droplets size={28} className="stroke-[2.5]" />
-              </div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                {authTab === 'login' ? 'Sign In to AquaPure' : 'Create AquaPure Account'}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {authTab === 'login'
-                  ? 'Access real-time telemetry, filter analytics & AI alerts.'
-                  : 'Register for centralized campus water telemetry access.'}
-              </p>
-            </div>
+                {/* Floating Hydro Bubbles inside Modal */}
+                <div className="absolute right-5 top-12 w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-[#00E5FF] to-white blur-[0.5px] animate-bubble-1 pointer-events-none" />
+                <div className="absolute left-6 bottom-14 w-3 h-3 rounded-full bg-gradient-to-tr from-[#0288D1] to-[#4FC3F7] blur-[0.5px] animate-bubble-3 pointer-events-none" />
+                <div className="absolute right-10 bottom-24 w-2 h-2 rounded-full bg-gradient-to-tr from-cyan-300 to-white blur-[0.5px] animate-bubble-2 pointer-events-none" />
 
-            {/* Tab Switcher (Login vs Sign Up) */}
-            <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-xl mb-6 border border-slate-200/60 dark:border-slate-800/60">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthTab('login');
-                  setLoginError(null);
-                }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer interactive-btn ${
-                  authTab === 'login'
-                    ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthTab('signup');
-                  setSignupError(null);
-                }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer interactive-btn ${
-                  authTab === 'signup'
-                    ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
+                {/* Top Close Button */}
+                <button
+                  onClick={() => setIsAuthModalOpen(false)}
+                  className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-[#00E5FF] dark:hover:text-[#00E5FF] hover:bg-sky-50 dark:hover:bg-slate-800/80 transition-all cursor-pointer interactive-btn z-20 border border-transparent hover:border-[#00E5FF]/40"
+                >
+                  <X size={18} />
+                </button>
 
-            {/* TAB 1: LOGIN FORM */}
-            {authTab === 'login' && (
-              <>
-                {loginError && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
-                    <AlertTriangle size={15} className="shrink-0 text-rose-500" />
-                    <span>{loginError}</span>
-                  </div>
-                )}
+                {/* Modal Header & Brand Icon with Animated Blue Ripples */}
+                <div className="text-center mb-6 relative">
+                  <div className="relative inline-flex items-center justify-center mb-3">
+                    {/* Expanding Water Ripple Waves */}
+                    <div className="absolute w-16 h-16 rounded-full border border-[#00E5FF]/40 animate-water-ripple pointer-events-none" />
+                    <div className="absolute w-20 h-20 rounded-full border border-sky-400/25 animate-water-ripple pointer-events-none" style={{ animationDelay: '1.2s' }} />
+                    {/* Orbit Ring */}
+                    <div className="absolute w-18 h-18 rounded-full border border-dashed border-[#00E5FF]/50 animate-orbit-slow pointer-events-none" />
 
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Mail size={16} />
-                      </div>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                        placeholder="mithilesh@aquapure.edu"
+                    <div className="relative p-1.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-[#00E5FF]/60 shadow-[0_0_20px_rgba(0,229,255,0.4)] animate-pulse-glow z-10">
+                      <img
+                        src="/aquapure-logo.jpg"
+                        alt="AquaPure Logo"
+                        className="w-12 h-12 rounded-xl object-contain"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Password
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsForgotModalOpen(true)}
-                        className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
-                      >
-                        Forgot Password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Lock size={16} />
-                      </div>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 interactive-btn"
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 accent-sky-600"
-                      />
-                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        Remember Me
-                      </span>
-                    </label>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoginLoading}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#4FC3F7] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#0277BD] text-slate-950 text-xs font-black shadow-lg shadow-[#4FC3F7]/30 hover:shadow-[#4FC3F7]/50 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
-                  >
-                    <span>{isLoginLoading ? 'Authenticating...' : 'Sign In to Dashboard'}</span>
-                    <ArrowRight size={16} className="stroke-[2.5]" />
-                  </button>
-                </form>
-
-                {/* 1-Click Demo Logins */}
-                <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                    <Sparkles size={13} className="text-amber-500 animate-pulse" />
-                    <span>1-Click Demo Logins</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickRole('ADMIN')}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all text-center cursor-pointer interactive-btn"
-                    >
-                      Administrator
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickRole('TECHNICAL_HEAD')}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all text-center cursor-pointer interactive-btn"
-                    >
-                      Technical Head
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickRole('MAINTENANCE_STAFF')}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all text-center cursor-pointer interactive-btn"
-                    >
-                      Maintenance Staff
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickRole('VIEWER')}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all text-center cursor-pointer interactive-btn"
-                    >
-                      Viewer (Read-Only)
-                    </button>
-                  </div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {authTab === 'login' ? 'Sign In to AquaPure' : 'Create AquaPure Account'}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                    {authTab === 'login'
+                      ? 'Access real-time telemetry, filter analytics & AI alerts.'
+                      : 'Register for centralized S.B. Jain campus water telemetry access.'}
+                  </p>
                 </div>
-              </>
-            )}
 
-            {/* TAB 2: SIGN UP FORM */}
-            {authTab === 'signup' && (
-              <>
-                {signupError && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
-                    <AlertTriangle size={15} className="shrink-0 text-rose-500" />
-                    <span>{signupError}</span>
-                  </div>
+                {/* Tab Switcher (Login vs Sign Up) with Glowing Blue Active Tab */}
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-900/90 rounded-xl mb-6 border border-sky-200/60 dark:border-sky-900/50 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthTab('login');
+                      setLoginError(null);
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer interactive-btn ${
+                      authTab === 'login'
+                        ? 'bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] text-slate-950 font-black shadow-[0_0_15px_rgba(0,229,255,0.4)]'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthTab('signup');
+                      setSignupError(null);
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer interactive-btn ${
+                      authTab === 'signup'
+                        ? 'bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] text-slate-950 font-black shadow-[0_0_15px_rgba(0,229,255,0.4)]'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Create Account
+                  </button>
+                </div>
+
+                {/* TAB 1: LOGIN FORM */}
+                {authTab === 'login' && (
+                  <>
+                    {loginError && (
+                      <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
+                        <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                        <span>{loginError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleLoginSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Email Address
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                            <Mail size={16} />
+                          </div>
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                            placeholder="admin@aquapure.edu"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Password
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsForgotModalOpen(true)}
+                            className="text-[11px] font-semibold text-[#0288D1] dark:text-[#4FC3F7] hover:underline cursor-pointer"
+                          >
+                            Forgot Password?
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                            <Lock size={16} />
+                          </div>
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#00E5FF] transition-colors interactive-btn"
+                          >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-[#0288D1] focus:ring-[#00E5FF] accent-[#0288D1]"
+                          />
+                          <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                            Remember Me
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Electric Blue Sign In Action Button */}
+                      <button
+                        type="submit"
+                        disabled={isLoginLoading}
+                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
+                      >
+                        <span>{isLoginLoading ? 'Authenticating...' : 'Sign In to Dashboard'}</span>
+                        <ArrowRight size={16} className="stroke-[2.5]" />
+                      </button>
+                    </form>
+
+                    {/* 1-Click Demo Logins with Blue Hover Effects */}
+                    <div className="mt-6 pt-5 border-t border-sky-100 dark:border-slate-800">
+                      <div className="flex items-center justify-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#0288D1] dark:text-[#4FC3F7] mb-3">
+                        <Sparkles size={13} className="text-[#00E5FF] animate-pulse" />
+                        <span>1-Click Quick Access Logins</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickRole('ADMIN')}
+                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                        >
+                          Administrator
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickRole('TECHNICAL_HEAD')}
+                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                        >
+                          Technical Head
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickRole('MAINTENANCE_STAFF')}
+                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                        >
+                          Maintenance Staff
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickRole('VIEWER')}
+                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                        >
+                          Viewer (Read-Only)
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
 
-                <form onSubmit={handleSignupSubmit} className="space-y-3.5">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Full Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <UserIcon size={16} />
+                {/* TAB 2: SIGN UP / REGISTRATION FORM (With Dynamic Real-Time Blue Effects) */}
+                {authTab === 'signup' && (
+                  <>
+                    {signupError && (
+                      <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
+                        <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                        <span>{signupError}</span>
                       </div>
-                      <input
-                        type="text"
-                        required
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                        placeholder="Dr. Rajesh Gupta"
-                      />
-                    </div>
-                  </div>
+                    )}
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Mail size={16} />
-                      </div>
-                      <input
-                        type="email"
-                        required
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                        placeholder="rajesh.gupta@sbjit.edu.in"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Campus / Organization
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                          <Building2 size={14} />
+                    <form onSubmit={handleSignupSubmit} className="space-y-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Full Name
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                            <UserIcon size={16} />
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            value={signupName}
+                            onChange={(e) => setSignupName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                            placeholder="Dr. Rajesh Gupta"
+                          />
                         </div>
-                        <input
-                          type="text"
-                          value={signupOrg}
-                          onChange={(e) => setSignupOrg(e.target.value)}
-                          className="w-full pl-8 pr-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                          placeholder="SBJIT Campus"
-                        />
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Requested Role
-                      </label>
-                      <select
-                        value={signupRole}
-                        onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                        className="w-full px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                      >
-                        <option value="VIEWER">Viewer</option>
-                        <option value="MAINTENANCE_STAFF">Maintenance Staff</option>
-                        <option value="TECHNICAL_HEAD">Technical Head</option>
-                        <option value="ADMIN">Administrator</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Lock size={16} />
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Email Address
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                            <Mail size={16} />
+                          </div>
+                          <input
+                            type="email"
+                            required
+                            value={signupEmail}
+                            onChange={(e) => setSignupEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                            placeholder="rajesh.gupta@sbjit.edu.in"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                        placeholder="••••••••"
-                      />
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Campus / Organization
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <Building2 size={14} />
+                            </div>
+                            <input
+                              type="text"
+                              value={signupOrg}
+                              onChange={(e) => setSignupOrg(e.target.value)}
+                              className="w-full pl-8 pr-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all"
+                              placeholder="S.B. Jain Campus"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Requested Role
+                          </label>
+                          <select
+                            value={signupRole}
+                            onChange={(e) => setSignupRole(e.target.value as UserRole)}
+                            className="w-full px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all font-medium"
+                          >
+                            <option value="VIEWER">Viewer</option>
+                            <option value="MAINTENANCE_STAFF">Maintenance Staff</option>
+                            <option value="TECHNICAL_HEAD">Technical Head</option>
+                            <option value="ADMIN">Administrator</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                            <Lock size={16} />
+                          </div>
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={signupPassword}
+                            onChange={(e) => setSignupPassword(e.target.value)}
+                            className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#00E5FF] interactive-btn transition-colors"
+                          >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+
+                        {/* Dynamic Real-Time Password Strength Meter */}
+                        {signupPassword && (
+                          <div className="mt-2 p-2.5 rounded-xl bg-sky-50/60 dark:bg-slate-900/90 border border-[#00E5FF]/30 animate-fade-in">
+                            <div className="flex items-center justify-between text-[10px] mb-1.5">
+                              <span className="text-slate-500 dark:text-slate-400 font-medium">Security Matrix:</span>
+                              <span className={`font-bold ${getPasswordStrength(signupPassword).text}`}>
+                                {getPasswordStrength(signupPassword).label}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${getPasswordStrength(signupPassword).color} shadow-[0_0_8px_#00E5FF]`}
+                                style={{ width: getPasswordStrength(signupPassword).width }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       <button
-                        type="button"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 interactive-btn"
+                        type="submit"
+                        disabled={isSignupLoading}
+                        className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
                       >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        <span>{isSignupLoading ? 'Registering Account...' : 'Create Account & Enter'}</span>
+                        <ArrowRight size={16} className="stroke-[2.5]" />
                       </button>
-                    </div>
-                  </div>
+                    </form>
+                  </>
+                )}
 
-                  <button
-                    type="submit"
-                    disabled={isSignupLoading}
-                    className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#4FC3F7] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#0277BD] text-slate-950 text-xs font-black shadow-lg shadow-[#4FC3F7]/30 hover:shadow-[#4FC3F7]/50 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
-                  >
-                    <span>{isSignupLoading ? 'Registering Account...' : 'Create Account & Enter'}</span>
-                    <ArrowRight size={16} className="stroke-[2.5]" />
-                  </button>
-                </form>
-              </>
-            )}
+                {/* Secure Session Footer in Blue */}
+                <div className="mt-4 pt-3 text-center border-t border-sky-100 dark:border-slate-800/80 flex items-center justify-center gap-1.5 text-[10px] text-[#0288D1] dark:text-[#4FC3F7] font-semibold">
+                  <ShieldCheck size={13} className="text-[#00E5FF]" />
+                  <span>256-bit Encrypted Telemetry Grid &bull; S.B. Jain Campus</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
 
       {/* =========================================================================
-          FORGOT PASSWORD MODAL
+          FORGOT PASSWORD MODAL (Electric Blue Theme)
          ========================================================================= */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-[#0e172a] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative animate-scale-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-[#071328] rounded-3xl shadow-2xl shadow-[#00E5FF]/20 border border-[#00E5FF]/40 p-6 relative animate-scale-up overflow-hidden blue-pulse-aura">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent animate-blue-scanline pointer-events-none" />
             <button
               onClick={() => {
                 setIsForgotModalOpen(false);
                 setForgotSuccess(false);
               }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg cursor-pointer interactive-btn"
+              className="absolute top-4 right-4 text-slate-400 hover:text-[#00E5FF] dark:hover:text-[#00E5FF] p-1.5 rounded-lg cursor-pointer interactive-btn transition-colors"
             >
               <X size={18} />
             </button>
 
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-              Reset Your Password
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              Enter your registered email to receive verification reset instructions.
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-[#00E5FF]/15 border border-[#00E5FF]/40 flex items-center justify-center text-[#00E5FF]">
+                <ShieldCheck size={16} />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Reset Password
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-sky-200/70 mb-4">
+              Enter your registered campus email to receive verification reset instructions.
             </p>
 
             {forgotSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5 animate-fade-in-up">
-                <CheckCircle size={18} className="shrink-0 text-emerald-600" />
-                <span>Password reset link sent to your email! (Simulated)</span>
+              <div className="p-4 rounded-xl bg-cyan-950/40 border border-[#00E5FF]/40 text-[#00E5FF] text-xs flex items-center gap-2.5 animate-fade-in-up">
+                <CheckCircle size={18} className="shrink-0 text-[#00E5FF]" />
+                <span className="font-medium">Password reset link sent to your email! (Simulated)</span>
               </div>
             ) : (
               <form onSubmit={handleForgotSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-sky-200 mb-1">
                     Email Address
                   </label>
                   <input
@@ -1395,12 +1464,12 @@ export const LoginPage: React.FC = () => {
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     placeholder="user@aquapure.edu"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0b1933] border border-slate-200 dark:border-[#0288D1]/40 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-sky-400/40"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#4FC3F7] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#0277BD] text-slate-950 text-xs font-black shadow-md shadow-[#4FC3F7]/30 hover:shadow-[#4FC3F7]/50 transition-all cursor-pointer interactive-btn shimmer-sweep"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#0288D1] to-[#01579B] hover:from-[#38BDF8] hover:to-[#0288D1] text-white text-xs font-bold shadow-lg shadow-[#00E5FF]/25 hover:shadow-[#00E5FF]/40 transition-all cursor-pointer interactive-btn shimmer-sweep"
                 >
                   Send Reset Link
                 </button>

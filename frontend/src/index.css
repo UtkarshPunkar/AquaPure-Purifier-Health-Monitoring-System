@@ -170,6 +170,288 @@ html {
   }
 }
 
+/* Side Animations & Telemetry Stream Effects */
+@keyframes sideLaserDown {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(1000%);
+    opacity: 0;
+  }
+}
+
+@keyframes sideLaserUp {
+  0% {
+    transform: translateY(1000%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes floatBubble {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.75;
+    transform: translateY(-30px) translateX(6px) scale(1);
+  }
+  60% {
+    opacity: 0.9;
+    transform: translateY(-80px) translateX(-8px) scale(1.08);
+  }
+  85% {
+    opacity: 0.45;
+    transform: translateY(-130px) translateX(5px) scale(0.95);
+  }
+  100% {
+    transform: translateY(-170px) translateX(0) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes floatDriftLeft {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) translateX(5px) rotate(1.2deg);
+  }
+}
+
+@keyframes floatDriftRight {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) translateX(-5px) rotate(-1.2deg);
+  }
+}
+
+@keyframes pulseRadarRing {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes equalizerBounce {
+  0%, 100% {
+    height: 5px;
+  }
+  50% {
+    height: 20px;
+  }
+}
+
+@keyframes streamGlowOrbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Blue Theme Sign In Animations & Glowing Effects */
+@keyframes bluePulseAura {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1) translate(-50%, -50%);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.15) translate(-50%, -50%);
+  }
+}
+
+@keyframes blueScanline {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(1200%);
+    opacity: 0;
+  }
+}
+
+@keyframes waterRippleExpand {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes blueBorderSweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-blue-aura {
+  animation: bluePulseAura 5s ease-in-out infinite;
+}
+
+.animate-blue-scanline {
+  animation: blueScanline 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-water-ripple {
+  animation: waterRippleExpand 2.8s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+}
+
+.animate-border-glow-blue {
+  background-size: 200% 200%;
+  animation: blueBorderSweep 4s ease infinite;
+}
+
+@keyframes cyberSpinClockwise {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cyberSpinCounterClockwise {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes liquidWaveMove {
+  0% { transform: translateX(0) translateZ(0) scaleY(1); }
+  50% { transform: translateX(-25%) translateZ(0) scaleY(0.85); }
+  100% { transform: translateX(-50%) translateZ(0) scaleY(1); }
+}
+
+@keyframes hydroRiseContinuous {
+  0% {
+    transform: translateY(120%) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-40%) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes eqBounceA {
+  0%, 100% { height: 4px; }
+  50% { height: 26px; }
+}
+
+@keyframes eqBounceB {
+  0%, 100% { height: 18px; }
+  50% { height: 6px; }
+}
+
+@keyframes eqBounceC {
+  0%, 100% { height: 8px; }
+  50% { height: 22px; }
+}
+
+@keyframes eqBounceD {
+  0%, 100% { height: 24px; }
+  50% { height: 10px; }
+}
+
+@keyframes sideWingFloatLeft {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-8px) translateX(-3px);
+  }
+}
+
+@keyframes sideWingFloatRight {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-8px) translateX(3px);
+  }
+}
+
+.animate-cyber-spin-cw {
+  animation: cyberSpinClockwise 12s linear infinite;
+}
+
+.animate-cyber-spin-ccw {
+  animation: cyberSpinCounterClockwise 8s linear infinite;
+}
+
+.animate-liquid-wave {
+  animation: liquidWaveMove 6s ease-in-out infinite;
+}
+
+.animate-hydro-rise-1 {
+  animation: hydroRiseContinuous 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-hydro-rise-2 {
+  animation: hydroRiseContinuous 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.2s;
+}
+
+.animate-hydro-rise-3 {
+  animation: hydroRiseContinuous 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite 2.1s;
+}
+
+.animate-eq-a { animation: eqBounceA 1.1s ease-in-out infinite; }
+.animate-eq-b { animation: eqBounceB 1.4s ease-in-out infinite; }
+.animate-eq-c { animation: eqBounceC 0.9s ease-in-out infinite; }
+.animate-eq-d { animation: eqBounceD 1.3s ease-in-out infinite; }
+
+.animate-wing-left {
+  animation: sideWingFloatLeft 6s ease-in-out infinite;
+}
+
+.animate-wing-right {
+  animation: sideWingFloatRight 6s ease-in-out infinite 0.5s;
+}
+
 /* Animation Helper Classes */
 .animate-fade-in {
   animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -210,6 +492,46 @@ html {
 .animate-badge-ping {
   animation: badgePing 2.5s infinite;
 }
+
+.animate-side-laser-down {
+  animation: sideLaserDown 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-side-laser-up {
+  animation: sideLaserUp 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-float-drift-left {
+  animation: floatDriftLeft 6s ease-in-out infinite;
+}
+
+.animate-float-drift-right {
+  animation: floatDriftRight 7s ease-in-out infinite;
+}
+
+.animate-radar-ring {
+  animation: pulseRadarRing 3s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.animate-orbit-slow {
+  animation: streamGlowOrbit 20s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: streamGlowOrbit 26s linear infinite reverse;
+}
+
+.animate-bubble-1 { animation: floatBubble 5s ease-in-out infinite; }
+.animate-bubble-2 { animation: floatBubble 7s ease-in-out 1.5s infinite; }
+.animate-bubble-3 { animation: floatBubble 6s ease-in-out 3s infinite; }
+.animate-bubble-4 { animation: floatBubble 8s ease-in-out 2s infinite; }
+.animate-bubble-5 { animation: floatBubble 6.5s ease-in-out 4s infinite; }
+
+.animate-equalizer-1 { animation: equalizerBounce 1.2s ease-in-out infinite alternate; }
+.animate-equalizer-2 { animation: equalizerBounce 1.5s ease-in-out 0.2s infinite alternate; }
+.animate-equalizer-3 { animation: equalizerBounce 0.9s ease-in-out 0.4s infinite alternate; }
+.animate-equalizer-4 { animation: equalizerBounce 1.7s ease-in-out 0.1s infinite alternate; }
+.animate-equalizer-5 { animation: equalizerBounce 1.3s ease-in-out 0.3s infinite alternate; }
 
 /* Stagger Entrance Helpers */
 .stagger-1 { animation-delay: 80ms; }

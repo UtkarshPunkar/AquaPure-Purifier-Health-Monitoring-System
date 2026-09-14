@@ -209,7 +209,7 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div>
               <strong className="text-slate-800 dark:text-slate-200">Scope: </strong>
-              {selectedPurifier === 'ALL' ? 'Campus Fleet (12 Units)' : selectedPurifier}
+              {selectedPurifier === 'ALL' ? 'Campus Fleet (5 Units)' : selectedPurifier}
             </div>
           </div>
         </div>
@@ -220,7 +220,7 @@ export const ReportsPage: React.FC = () => {
             1. Executive Compliance Summary
           </h3>
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            During the selected reporting horizon, the AquaPure telemetry grid evaluated continuous sensor streams for Total Dissolved Solids (TDS), Turbidity, pH balance, and temperature across campus water filtration units. Overall drinking water potability maintained a mean score of <strong>{avg.avgWqi}/100 (Safe Compliance)</strong>, with 11 of 12 units operating within WHO and IS 10500 standards.
+            During the selected reporting horizon, the AquaPure telemetry grid evaluated continuous sensor streams for Total Dissolved Solids (TDS), Turbidity, pH balance, and temperature across campus water filtration units. Overall drinking water potability maintained a mean score of <strong>{avg.avgWqi}/100 (Safe Compliance)</strong>, with 4 of 5 units operating within WHO and IS 10500 standards.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">

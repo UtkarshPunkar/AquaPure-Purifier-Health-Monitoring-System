@@ -85,10 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         status: 'ACTIVE',
         organization: {
-          id: 'org-apex',
-          name: 'Apex National Institute of Technology',
-          code: 'APEX-CAMPUS-01',
-          address: 'Knowledge City Corridor, Central Campus Zone',
+          id: 'org-sbjain',
+          name: 'S.B. Jain Institute of Technology And Research',
+          code: 'SBJAIN-CAMPUS-01',
+          address: 'Katol Road, Nagpur, Maharashtra 441501',
         },
       };
       const mockToken = 'mock-jwt-token-aquapure-' + Date.now();
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     pass: string,
     role: UserRole = 'VIEWER',
-    organizationName = 'Apex Campus Water Management'
+    organizationName = 'S.B. Jain Campus Water Management'
   ) => {
     try {
       // If user creation API exists
@@ -134,10 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickLogin = async (role: UserRole) => {
-    let email = 'mithilesh@aquapure.edu';
-    if (role === 'TECHNICAL_HEAD') email = 'vedant@aquapure.edu';
-    if (role === 'MAINTENANCE_STAFF') email = 'rajesh@aquapure.edu';
-    if (role === 'VIEWER') email = 'priya@aquapure.edu';
+    let email = 'admin@aquapure.edu';
+    if (role === 'TECHNICAL_HEAD') email = 'techhead@aquapure.edu';
+    if (role === 'MAINTENANCE_STAFF') email = 'maintenance@aquapure.edu';
+    if (role === 'VIEWER') email = 'viewer@aquapure.edu';
 
     await login(email, 'admin123', true);
   };

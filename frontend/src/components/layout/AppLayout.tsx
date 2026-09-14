@@ -22,7 +22,7 @@ export const AppLayout: React.FC = () => {
         <DemoControlBar />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1750px] w-full mx-auto">
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>

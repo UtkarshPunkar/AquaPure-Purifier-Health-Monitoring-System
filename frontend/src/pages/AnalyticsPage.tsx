@@ -134,7 +134,7 @@ export const AnalyticsPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Fleet Machine Uptime</div>
           <div className="text-2xl font-black text-sky-600 dark:text-sky-400 font-mono">98.8%</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">11/12 Nodes Online</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">{purifiers.filter((p) => p.status !== 'OFFLINE').length}/{purifiers.length || 5} Nodes Online</div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">

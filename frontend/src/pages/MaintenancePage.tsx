@@ -29,7 +29,7 @@ export const MaintenancePage: React.FC = () => {
     purifierId: '',
     issue: 'RO Membrane & Carbon Filter Replacement',
     priority: 'HIGH',
-    technician: 'Rajesh Sharma',
+    technician: 'Field Maintenance Team',
     scheduledDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
     notes: 'Auto-triggered by predictive degradation threshold.',
   });

@@ -53,9 +53,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Brand Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
         <NavLink to="/" onClick={onClose} className="flex items-center gap-3 min-w-0 group interactive-btn">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 flex items-center justify-center text-white shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-            <Droplets size={20} className="stroke-[2.5]" />
-          </div>
+          <img
+            src="/aquapure-logo.jpg"
+            alt="AquaPure Logo"
+            className="h-9 w-9 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm shrink-0 group-hover:scale-105 transition-transform"
+          />
           <div className="min-w-0">
             <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
               AquaPure Pro
@@ -116,10 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <div className="p-3 m-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs interactive-card">
         <div className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 font-bold mb-1 text-[11px]">
           <ShieldCheck size={14} />
-          <span>Apex NIT Campus</span>
+          <span>S.B. Jain Campus</span>
         </div>
         <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-          12 Nodes Online &bull; WHO-WQI Certified
+          5 Nodes Online &bull; WHO-WQI Certified
         </p>
       </div>
     </div>

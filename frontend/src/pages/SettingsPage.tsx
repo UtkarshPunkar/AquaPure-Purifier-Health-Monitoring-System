@@ -35,15 +35,15 @@ export const SettingsPage: React.FC = () => {
 
   // Form State
   const [profile, setProfile] = useState({
-    name: user?.name || 'Mithilesh Kose',
-    email: user?.email || 'mithilesh@aquapure.edu',
+    name: user?.name || 'Campus Administrator',
+    email: user?.email || 'admin@aquapure.edu',
     role: user?.role || 'ADMIN',
     department: 'Central Water & Facility Operations',
     phone: '+91 98765 43210',
   });
 
   const [organization, setOrganization] = useState({
-    campusName: 'S.B. Jain Institute of Technology, Management & Research',
+    campusName: 'S.B. Jain Institute of Technology And Research',
     campusAddress: 'Katol Road, Nagpur, Maharashtra 441501',
     facilityLead: 'Dr. S. L. Badjate',
     contactEmail: 'water-monitoring@sbjit.edu.in',

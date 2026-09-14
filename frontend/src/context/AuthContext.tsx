@@ -8,7 +8,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, pass: string, rememberMe?: boolean) => Promise<void>;
   signUp: (name: string, email: string, pass: string, role?: UserRole, organizationName?: string) => Promise<void>;
-  quickLogin: (role: UserRole) => Promise<void>;
   logout: () => void;
 }
 
@@ -133,15 +132,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = async (role: UserRole) => {
-    let email = 'admin@aquapure.edu';
-    if (role === 'TECHNICAL_HEAD') email = 'techhead@aquapure.edu';
-    if (role === 'MAINTENANCE_STAFF') email = 'maintenance@aquapure.edu';
-    if (role === 'VIEWER') email = 'viewer@aquapure.edu';
-
-    await login(email, 'admin123', true);
-  };
-
   const logout = () => {
     localStorage.removeItem('smart_water_token');
     localStorage.removeItem('smart_water_user');
@@ -151,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, signUp, quickLogin, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );

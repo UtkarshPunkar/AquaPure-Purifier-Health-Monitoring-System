@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
-import { DemoControlBar } from '../simulation/DemoControlBar';
 
 export const AppLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -13,14 +11,8 @@ export const AppLayout: React.FC = () => {
       {/* Left Sidebar (Desktop static / Mobile Drawer) */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      {/* Right Column: Top Navbar + Simulation Bar + Main Content + Footer */}
+      {/* Right Column: Main Content + Footer */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        {/* Top Navbar */}
-        <Navbar onMenuToggle={() => setIsSidebarOpen((prev) => !prev)} />
-
-        {/* Demo Simulation Bar */}
-        <DemoControlBar />
-
         {/* Main Content Area */}
         <main className="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1750px] w-full mx-auto">
           <div key={location.pathname} className="page-enter">

@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
         <NavLink to="/" onClick={onClose} className="flex items-center gap-3 min-w-0 group interactive-btn">
           <img
-            src="/aquapure-logo.jpg"
+            src="/aquapure-logo.png"
             alt="AquaPure Logo"
             className="h-9 w-9 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm shrink-0 group-hover:scale-105 transition-transform"
           />

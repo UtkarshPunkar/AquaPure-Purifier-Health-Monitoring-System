@@ -119,7 +119,7 @@ const getPasswordStrength = (pass: string) => {
 };
 
 export const LoginPage: React.FC = () => {
-  const { login, signUp, quickLogin, user } = useAuth();
+  const { login, signUp, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -242,20 +242,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickRole = async (role: UserRole) => {
-    setLoginError(null);
-    setIsLoginLoading(true);
-    try {
-      await quickLogin(role);
-      setIsAuthModalOpen(false);
-      navigate('/');
-    } catch (err: any) {
-      setLoginError('Unable to perform quick login.');
-    } finally {
-      setIsLoginLoading(false);
-    }
-  };
-
   const handleForgotSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) return;
@@ -274,7 +260,20 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070d19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 selection:bg-[#4FC3F7] selection:text-slate-950 relative overflow-x-clip">
+    <div className="home-motion-shell min-h-screen bg-slate-50 dark:bg-[#070d19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 selection:bg-[#4FC3F7] selection:text-slate-950 relative overflow-x-clip">
+      <div className="home-motion-orb home-motion-orb-one" aria-hidden="true" />
+      <div className="home-motion-orb home-motion-orb-two" aria-hidden="true" />
+      <div className="home-motion-grid" aria-hidden="true" />
+      <div className="home-motion-beam" aria-hidden="true" />
+      <div className="home-motion-particle home-motion-particle-one" aria-hidden="true" />
+      <div className="home-motion-particle home-motion-particle-two" aria-hidden="true" />
+      <div className="home-motion-particle home-motion-particle-three" aria-hidden="true" />
+      <div className="home-water-bubble home-water-bubble-one" aria-hidden="true" />
+      <div className="home-water-bubble home-water-bubble-two" aria-hidden="true" />
+      <div className="home-water-bubble home-water-bubble-three" aria-hidden="true" />
+      <div className="home-water-bubble home-water-bubble-four" aria-hidden="true" />
+      <div className="home-water-bubble home-water-bubble-five" aria-hidden="true" />
+
       {/* =========================================================================
           HEADER / NAVBAR (Sticky Blended Glassmorphism: Home, Features, Help, Contacts)
          ========================================================================= */}
@@ -284,7 +283,7 @@ export const LoginPage: React.FC = () => {
             {/* Brand Logo */}
             <a href="#home" className="flex items-center gap-3 group interactive-btn">
               <img
-                src="/aquapure-logo.jpg"
+                src="/aquapure-logo.png"
                 alt="AquaPure Logo"
                 className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-sky-500/20 group-hover:scale-105 group-hover:shadow-sky-500/40 transition-all duration-300"
               />
@@ -574,7 +573,7 @@ export const LoginPage: React.FC = () => {
             <div className="lg:col-span-7 relative pb-32 space-y-0">
               {/* Card 1: Warm Peach / Amber Pastel Card */}
               <div
-                className="sticky z-10 mb-[32vh] sm:mb-[40vh] p-7 sm:p-9 rounded-3xl bg-[#fff7ed] dark:bg-[#150d03] border border-orange-200/90 dark:border-orange-900/70 hover:border-orange-400 dark:hover:border-orange-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-10 mb-6 lg:mb-[34vh] p-7 sm:p-9 rounded-3xl bg-[#fff7ed] dark:bg-[#150d03] border border-orange-200/90 dark:border-orange-900/70 hover:border-orange-400 dark:hover:border-orange-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '100px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -595,7 +594,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Card 2: Soft Mint / Emerald Pastel Card */}
               <div
-                className="sticky z-20 mb-[32vh] sm:mb-[40vh] p-7 sm:p-9 rounded-3xl bg-[#f0fdf4] dark:bg-[#05170d] border border-emerald-200/90 dark:border-emerald-900/70 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-20 mb-6 lg:mb-[34vh] p-7 sm:p-9 rounded-3xl bg-[#f0fdf4] dark:bg-[#05170d] border border-emerald-200/90 dark:border-emerald-900/70 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '125px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -616,7 +615,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Card 3: Soft Periwinkle / Indigo Pastel Card */}
               <div
-                className="sticky z-30 mb-[32vh] sm:mb-[40vh] p-7 sm:p-9 rounded-3xl bg-[#f1f4ff] dark:bg-[#091124] border border-indigo-200/90 dark:border-indigo-900/70 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-30 mb-6 lg:mb-[34vh] p-7 sm:p-9 rounded-3xl bg-[#f1f4ff] dark:bg-[#091124] border border-indigo-200/90 dark:border-indigo-900/70 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '150px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -637,7 +636,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Card 4: Soft Sky / Cyan Pastel Card */}
               <div
-                className="sticky z-40 mb-[32vh] sm:mb-[40vh] p-7 sm:p-9 rounded-3xl bg-[#f0f9ff] dark:bg-[#041322] border border-sky-200/90 dark:border-sky-900/70 hover:border-sky-400 dark:hover:border-sky-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-40 mb-6 lg:mb-[34vh] p-7 sm:p-9 rounded-3xl bg-[#f0f9ff] dark:bg-[#041322] border border-sky-200/90 dark:border-sky-900/70 hover:border-sky-400 dark:hover:border-sky-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '175px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -658,7 +657,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Card 5: Soft Lavender / Purple Pastel Card */}
               <div
-                className="sticky z-50 mb-[32vh] sm:mb-[40vh] p-7 sm:p-9 rounded-3xl bg-[#faf5ff] dark:bg-[#12081f] border border-purple-200/90 dark:border-purple-900/70 hover:border-purple-400 dark:hover:border-purple-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-50 mb-6 lg:mb-[34vh] p-7 sm:p-9 rounded-3xl bg-[#faf5ff] dark:bg-[#12081f] border border-purple-200/90 dark:border-purple-900/70 hover:border-purple-400 dark:hover:border-purple-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '200px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -679,7 +678,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Card 6: Soft Aqua / Teal Pastel Card */}
               <div
-                className="sticky z-[60] mb-8 p-7 sm:p-9 rounded-3xl bg-[#f0fdfa] dark:bg-[#041614] border border-teal-200/90 dark:border-teal-900/70 hover:border-teal-400 dark:hover:border-teal-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
+                className="lg:sticky z-[60] mb-6 lg:mb-8 p-7 sm:p-9 rounded-3xl bg-[#f0fdfa] dark:bg-[#041614] border border-teal-200/90 dark:border-teal-900/70 hover:border-teal-400 dark:hover:border-teal-500 shadow-[0_-8px_25px_rgba(0,0,0,0.06),0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.5),0_25px_50px_rgba(0,0,0,0.8)] hover:-translate-y-1 transition-all duration-300 group cursor-default interactive-card"
                 style={{ top: '225px' }}
               >
                 <div className="flex items-center justify-between mb-5">
@@ -819,7 +818,7 @@ export const LoginPage: React.FC = () => {
                   <div className="max-w-md">
                     <div className="flex items-center gap-3 group mb-3">
                       <img
-                        src="/aquapure-logo.jpg"
+                        src="/aquapure-logo.png"
                         alt="AquaPure Logo"
                         className="w-11 h-11 rounded-2xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-sky-600/30 group-hover:scale-105 transition-transform duration-300"
                       />
@@ -1086,7 +1085,7 @@ export const LoginPage: React.FC = () => {
 
                     <div className="relative p-1.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-[#00E5FF]/60 shadow-[0_0_20px_rgba(0,229,255,0.4)] animate-pulse-glow z-10">
                       <img
-                        src="/aquapure-logo.jpg"
+                        src="/aquapure-logo.png"
                         alt="AquaPure Logo"
                         className="w-12 h-12 rounded-xl object-contain"
                       />
@@ -1225,43 +1224,6 @@ export const LoginPage: React.FC = () => {
                       </button>
                     </form>
 
-                    {/* 1-Click Demo Logins with Blue Hover Effects */}
-                    <div className="mt-6 pt-5 border-t border-sky-100 dark:border-slate-800">
-                      <div className="flex items-center justify-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#0288D1] dark:text-[#4FC3F7] mb-3">
-                        <Sparkles size={13} className="text-[#00E5FF] animate-pulse" />
-                        <span>1-Click Quick Access Logins</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickRole('ADMIN')}
-                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
-                        >
-                          Administrator
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickRole('TECHNICAL_HEAD')}
-                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
-                        >
-                          Technical Head
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickRole('MAINTENANCE_STAFF')}
-                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
-                        >
-                          Maintenance Staff
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickRole('VIEWER')}
-                          className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-slate-900/90 hover:bg-[#00E5FF]/10 dark:hover:bg-sky-950/60 hover:text-[#0288D1] dark:hover:text-[#4FC3F7] border border-sky-200/80 dark:border-sky-900/60 hover:border-[#00E5FF] text-slate-800 dark:text-slate-200 text-[11px] font-bold transition-all text-center cursor-pointer interactive-btn shadow-xs hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]"
-                        >
-                          Viewer (Read-Only)
-                        </button>
-                      </div>
-                    </div>
                   </>
                 )}
 

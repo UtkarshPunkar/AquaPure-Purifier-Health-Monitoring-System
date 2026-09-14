@@ -48,6 +48,276 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Animated blue atmosphere for the public homepage. */
+.home-motion-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 58% 40% at 50% 28%, rgba(56, 189, 248, 0.28), transparent 72%),
+    radial-gradient(ellipse 34% 38% at 21% 34%, rgba(125, 211, 252, 0.2), transparent 75%),
+    radial-gradient(ellipse 34% 38% at 79% 36%, rgba(165, 180, 252, 0.18), transparent 75%);
+}
+
+.home-motion-shell::before {
+  content: '';
+  position: absolute;
+  z-index: -4;
+  top: 7rem;
+  left: 50%;
+  width: min(72vw, 980px);
+  height: 30rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: linear-gradient(110deg, rgba(125, 211, 252, 0.16), rgba(56, 189, 248, 0.3), rgba(129, 140, 248, 0.14));
+  filter: blur(72px);
+  opacity: 0.85;
+  animation: homeHaloPulse 8s ease-in-out infinite;
+}
+
+.home-motion-shell::after {
+  content: '';
+  position: absolute;
+  z-index: -4;
+  top: 16rem;
+  left: 50%;
+  width: min(48vw, 680px);
+  height: 18rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.16);
+  filter: blur(58px);
+  animation: homeHaloDrift 11s ease-in-out infinite;
+}
+
+.home-motion-orb,
+.home-motion-grid,
+.home-motion-beam,
+.home-motion-particle {
+  position: absolute;
+  pointer-events: none;
+}
+
+.home-motion-grid,
+.home-motion-beam,
+.home-motion-particle {
+  display: none;
+}
+
+.home-water-bubble {
+  position: absolute;
+  z-index: -1;
+  bottom: 7rem;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.85), rgba(125, 211, 252, 0.18) 38%, rgba(14, 165, 233, 0.06) 72%);
+  box-shadow: inset -2px -2px 5px rgba(14, 165, 233, 0.08), 0 0 14px rgba(56, 189, 248, 0.18);
+  opacity: 0;
+  animation: homeBubbleRise 10s ease-in-out infinite;
+}
+
+.home-water-bubble-one { left: 18%; animation-delay: -1s; }
+.home-water-bubble-two { left: 34%; width: 8px; height: 8px; animation-delay: -6s; animation-duration: 13s; }
+.home-water-bubble-three { right: 26%; width: 16px; height: 16px; animation-delay: -4s; animation-duration: 12s; }
+.home-water-bubble-four { right: 12%; width: 7px; height: 7px; animation-delay: -8s; animation-duration: 11s; }
+.home-water-bubble-five { left: 58%; width: 10px; height: 10px; animation-delay: -10s; animation-duration: 15s; }
+
+.home-motion-orb {
+  z-index: -3;
+  width: min(52vw, 760px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(85px);
+  opacity: 0.2;
+  animation: homeOrbFloat 14s ease-in-out infinite;
+}
+
+.home-motion-orb-one {
+  top: 2rem;
+  left: -18rem;
+  background: rgba(14, 165, 233, 0.34);
+}
+
+.home-motion-orb-two {
+  top: 8rem;
+  right: -18rem;
+  background: rgba(129, 140, 248, 0.3);
+  animation-delay: -4s;
+}
+
+.home-motion-grid {
+  z-index: -2;
+  inset: 0;
+  opacity: 0.09;
+  background-image:
+    linear-gradient(rgba(2, 132, 199, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 132, 199, 0.08) 1px, transparent 1px);
+  background-size: 46px 46px;
+  transform: perspective(900px) rotateX(58deg) scale(1.8) translateY(-12%);
+  transform-origin: top center;
+  mask-image: linear-gradient(to bottom, black, transparent 54%);
+}
+
+.home-motion-beam {
+  z-index: -1;
+  top: 0;
+  left: 50%;
+  width: min(42vw, 620px);
+  height: 78rem;
+  transform: translateX(-50%) rotate(12deg);
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.1), transparent);
+  filter: blur(18px);
+  opacity: 0.36;
+  animation: homeBeamSweep 9s ease-in-out infinite;
+}
+
+.home-motion-particle {
+  z-index: -1;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #38bdf8;
+  box-shadow: 0 0 18px 4px rgba(56, 189, 248, 0.65);
+  animation: homeParticleDrift 5s ease-in-out infinite;
+}
+
+.home-motion-particle-one { top: 18rem; left: 17%; }
+.home-motion-particle-two { top: 31rem; right: 19%; animation-delay: -2.5s; }
+.home-motion-particle-three { top: 52rem; left: 28%; animation-delay: -4.5s; }
+
+html.dark .home-motion-orb {
+  opacity: 0.3;
+}
+
+html.dark .home-motion-grid {
+  opacity: 0;
+}
+
+html.dark .home-motion-shell {
+  background:
+    radial-gradient(ellipse 58% 40% at 50% 28%, rgba(14, 165, 233, 0.24), transparent 72%),
+    radial-gradient(ellipse 34% 38% at 21% 34%, rgba(56, 189, 248, 0.16), transparent 75%),
+    radial-gradient(ellipse 34% 38% at 79% 36%, rgba(99, 102, 241, 0.16), transparent 75%);
+}
+
+@keyframes homeOrbFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2rem, 1.5rem, 0) scale(1.08); }
+}
+
+@keyframes homeHaloPulse {
+  0%, 100% { opacity: 0.68; transform: translateX(-50%) scale(0.98); }
+  50% { opacity: 0.95; transform: translateX(-50%) scale(1.06); }
+}
+
+@keyframes homeHaloDrift {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) translateY(0); }
+  50% { opacity: 0.75; transform: translateX(-50%) translateY(2rem); }
+}
+
+@keyframes homeBubbleRise {
+  0% { opacity: 0; transform: translate3d(0, 30px, 0) scale(0.7); }
+  18% { opacity: 0.62; }
+  72% { opacity: 0.34; }
+  100% { opacity: 0; transform: translate3d(18px, -360px, 0) scale(1.15); }
+}
+
+@keyframes homeBeamSweep {
+  0%, 100% { opacity: 0.2; transform: translateX(-50%) rotate(12deg) translateY(-8%); }
+  50% { opacity: 0.7; transform: translateX(-50%) rotate(12deg) translateY(8%); }
+}
+
+@keyframes homeParticleDrift {
+  0%, 100% { opacity: 0.2; transform: translate3d(0, 0, 0) scale(0.7); }
+  50% { opacity: 0.9; transform: translate3d(16px, -28px, 0) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-motion-orb,
+  .home-motion-beam,
+  .home-motion-particle,
+  .home-motion-shell::before,
+  .home-motion-shell::after,
+  .home-water-bubble {
+    animation: none;
+  }
+}
+
+/* Buildify-inspired ambient blue lighting for the dashboard home surface. */
+.dashboard-glow-shell {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 50% -12%, rgba(56, 189, 248, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(239, 248, 255, 0.82), rgba(248, 250, 252, 0.2) 42%, transparent 78%);
+}
+
+.dashboard-glow-orb {
+  position: absolute;
+  width: min(42vw, 620px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.42;
+  pointer-events: none;
+  animation: dashboardGlowDrift 11s ease-in-out infinite;
+}
+
+.dashboard-glow-orb-left {
+  top: 5rem;
+  left: -18rem;
+  background: rgba(14, 165, 233, 0.3);
+}
+
+.dashboard-glow-orb-right {
+  top: 22rem;
+  right: -20rem;
+  background: rgba(34, 211, 238, 0.25);
+  animation-delay: -5s;
+}
+
+.dashboard-glow-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.24;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(14, 165, 233, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.075) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+html.dark .dashboard-glow-shell {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(14, 165, 233, 0.18), transparent 35%),
+    linear-gradient(180deg, rgba(8, 47, 73, 0.5), rgba(2, 12, 27, 0.12) 48%, transparent 80%);
+}
+
+@media (min-width: 1024px) {
+  .feature-card-stack > div + div {
+    margin-top: -9rem;
+  }
+}
+
+html.dark .dashboard-glow-orb {
+  opacity: 0.62;
+}
+
+@keyframes dashboardGlowDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2rem, -1.5rem, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-glow-orb {
+    animation: none;
+  }
+}
+
 /* =========================================================================
    ANIMATION KEYFRAMES (Hardware-Accelerated, Smooth Easing)
    ========================================================================= */
@@ -684,26 +954,28 @@ html.dark .card-glow-hover:hover {
 .glass-header {
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  background-color: rgba(255, 255, 255, 0.5);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(125, 211, 252, 0.28);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.35), 0 8px 32px rgba(14, 165, 233, 0.04);
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 html.dark .glass-header {
-  background-color: rgba(7, 13, 25, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(7, 13, 25, 0.1);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: inset 0 -1px 0 rgba(125, 211, 252, 0.08), 0 8px 32px rgba(2, 132, 199, 0.08);
 }
 
 .glass-header.scrolled {
-  background-color: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
-  border-bottom-color: rgba(226, 232, 240, 0.8);
+  background-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.12), inset 0 -1px 0 rgba(255, 255, 255, 0.55);
+  border-bottom-color: rgba(125, 211, 252, 0.42);
 }
 
 html.dark .glass-header.scrolled {
-  background-color: rgba(7, 13, 25, 0.85);
-  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.5);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(7, 13, 25, 0.34);
+  box-shadow: 0 4px 25px -2px rgba(2, 132, 199, 0.22), inset 0 -1px 0 rgba(125, 211, 252, 0.12);
+  border-bottom-color: rgba(56, 189, 248, 0.3);
 }
 
 .glass-pill {

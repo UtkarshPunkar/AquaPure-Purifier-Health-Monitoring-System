@@ -22,7 +22,7 @@ export const AlertsPage: React.FC = () => {
   const { refreshData } = useTelemetry();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'CRITICAL' | 'WARNING' | 'INFO' | 'RESOLVED'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'CRITICAL' | 'WARNING' | 'INFO' | 'MAINTENANCE' | 'RESOLVED'>('ALL');
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -82,6 +82,7 @@ export const AlertsPage: React.FC = () => {
     if (activeTab === 'CRITICAL') return (a.severity === 'CRITICAL' || a.severity === 'OFFLINE') && matchesSearch;
     if (activeTab === 'WARNING') return a.severity === 'WARNING' && matchesSearch;
     if (activeTab === 'INFO') return (a.severity === 'INFO' || a.severity === 'PREDICTIVE') && matchesSearch;
+    if (activeTab === 'MAINTENANCE') return a.severity === 'MAINTENANCE' && matchesSearch;
 
     return matchesSearch;
   });
@@ -89,6 +90,7 @@ export const AlertsPage: React.FC = () => {
   const criticalCount = alerts.filter((a) => !a.isResolved && (a.severity === 'CRITICAL' || a.severity === 'OFFLINE')).length;
   const warningCount = alerts.filter((a) => !a.isResolved && a.severity === 'WARNING').length;
   const infoCount = alerts.filter((a) => !a.isResolved && (a.severity === 'INFO' || a.severity === 'PREDICTIVE')).length;
+  const maintenanceCount = alerts.filter((a) => !a.isResolved && a.severity === 'MAINTENANCE').length;
   const resolvedCount = alerts.filter((a) => a.isResolved).length;
 
   return (
@@ -119,10 +121,11 @@ export const AlertsPage: React.FC = () => {
           {/* Tabs */}
           <div className="flex items-center gap-1.5 flex-wrap text-xs font-semibold">
             {[
-              { id: 'ALL', label: `All Active (${criticalCount + warningCount + infoCount})` },
+              { id: 'ALL', label: `All Active (${criticalCount + warningCount + infoCount + maintenanceCount})` },
               { id: 'CRITICAL', label: `Critical Alerts (${criticalCount})`, badgeColor: 'bg-rose-500 text-white' },
               { id: 'WARNING', label: `Warnings (${warningCount})`, badgeColor: 'bg-amber-500 text-white' },
               { id: 'INFO', label: `Information (${infoCount})` },
+              { id: 'MAINTENANCE', label: `Maintenance (${maintenanceCount})` },
               { id: 'RESOLVED', label: `Resolved (${resolvedCount})` },
             ].map((tab) => (
               <button

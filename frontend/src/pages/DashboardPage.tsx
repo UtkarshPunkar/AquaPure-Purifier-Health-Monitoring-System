@@ -25,10 +25,7 @@ import {
   SlidersHorizontal,
   TrendingUp,
   ArrowUpRight,
-  Calendar,
-  Building2,
   Check,
-  Edit2,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -53,12 +50,18 @@ export const DashboardPage: React.FC = () => {
 
   // Active Category Tab (Matching reference image: Booking, Amenities, Customization, Locality)
   const [activeTab, setActiveTab] = useState<'overview' | 'health' | 'ai' | 'campus'>('overview');
-  const [task1Active, setTask1Active] = useState(true);
-  const [task2Active, setTask2Active] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'quality' | 'health' | 'safety' | 'maintenance'>('all');
+
+  const dashboardFilters = [
+    { id: 'all', label: 'All Filters' },
+    { id: 'quality', label: 'Water Quality' },
+    { id: 'health', label: 'Fleet Health' },
+    { id: 'safety', label: 'Safety' },
+    { id: 'maintenance', label: 'Maintenance' },
+  ] as const;
 
   // Greeting
   const userName = user?.name || 'Campus Administrator';
-  const userRole = user?.role === 'ADMIN' ? 'Super Admin' : user?.role?.replace('_', ' ') || 'Super Admin';
 
   // KPI Calculations
   const totalPurifiers = purifiers.length || 5;
@@ -125,11 +128,15 @@ export const DashboardPage: React.FC = () => {
   }, [purifiers]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="dashboard-glow-shell relative isolate -m-3.5 sm:-m-5 lg:-m-6 p-3.5 sm:p-5 lg:p-6 space-y-6 animate-in fade-in duration-200">
+      <div className="dashboard-glow-orb dashboard-glow-orb-left" aria-hidden="true" />
+      <div className="dashboard-glow-orb dashboard-glow-orb-right" aria-hidden="true" />
+      <div className="dashboard-glow-grid" aria-hidden="true" />
+
       {/* =========================================================================
           MAIN 2-COLUMN GRID: [MAIN DASHBOARD (Left)] + [CALENDAR & SCHEDULE (Right)]
          ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* =======================================================================
             LEFT COLUMN: Main Dashboard Content (Span 7/8)
            ======================================================================= */}
@@ -139,7 +146,7 @@ export const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Main Dashboard
+                  Welcome, {userName}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   S.B. Jain Institute &bull; Centralized Water Quality &amp; Purifier Monitoring System
@@ -206,29 +213,49 @@ export const DashboardPage: React.FC = () => {
                 S.B. Jain Campus
               </button>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {dashboardFilters.map((filter) => {
+                const isActive = selectedFilter === filter.id;
+                return (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setSelectedFilter(filter.id)}
+                    className={`min-w-[110px] rounded-2xl border px-3 py-2 text-[11px] font-bold tracking-wide transition-all shadow-sm ${
+                      isActive
+                        ? 'border-sky-200 bg-sky-500 text-white shadow-sky-200/80'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-sky-400'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Top Hero Cards (Matching the 4 Hero Cards in Reference Image) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Top Hero Cards (Matching the reference card proportions and compact styling) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Card 1: Water Quality / TDS Score with Sparkline */}
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold mb-1">
+            <div className="bg-white dark:bg-slate-900 px-4 py-3.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_22px_rgba(15,23,42,0.06)] flex flex-col justify-between min-h-[170px]">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold tracking-[0.02em]">
                   <span>Water Quality Index</span>
                   <TrendingUp size={14} className="text-emerald-500" />
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-                  {avgTds} <span className="text-xs font-normal text-slate-400">PPM</span>
+                <div className="flex items-baseline gap-1.5 text-[28px] sm:text-[32px] font-black text-slate-900 dark:text-white font-mono leading-none">
+                  <span>{avgTds}</span>
+                  <span className="text-[11px] font-normal text-slate-400 tracking-[0.08em] uppercase">PPM</span>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
                   100% Safe Drinking Quality
                 </span>
               </div>
 
-              {/* Sparkline mini chart */}
-              <div className="h-14 w-full mt-2">
+              <div className="h-10 w-full mt-3">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={sparklineData}>
+                  <LineChart data={sparklineData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
                     <Line
                       type="monotone"
                       dataKey="value"
@@ -241,209 +268,51 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Card 2: Bright Yellow Demographics / Health Score Card (Matching Reference Yellow Card) */}
-            <div className="bg-[#F9C74F] p-4 rounded-3xl text-slate-950 shadow-xs flex flex-col justify-between relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs font-bold opacity-85">
+            {/* Card 2: Bright Yellow Health Score Card */}
+            <div className="bg-[#F0BF38] px-4 py-3.5 rounded-[28px] text-slate-950 shadow-[0_10px_26px_rgba(240,191,56,0.22)] flex flex-col justify-between relative overflow-hidden min-h-[170px]">
+              <div className="flex items-center justify-between text-[12px] font-bold opacity-90">
                 <span>Fleet Health Score</span>
                 <ShieldCheck size={18} />
               </div>
-              <div className="my-2">
-                <div className="text-4xl font-black font-mono tracking-tight">
+              <div className="space-y-1.5 pt-2">
+                <div className="text-[48px] sm:text-[54px] font-black font-mono tracking-[-0.06em] leading-none">
                   98%
                 </div>
-                <span className="text-[11px] font-bold opacity-90 block">
+                <span className="text-[11px] font-bold opacity-90 block leading-snug">
                   All 5 Purifier Units Operational
                 </span>
               </div>
-              <div className="text-[10px] font-semibold opacity-75">
+              <div className="text-[10px] font-semibold opacity-75 pt-2">
                 S.B. Jain Institute Grid
               </div>
             </div>
 
-            {/* Card 3: Modern Purifier Architecture Showcase Card */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-tr from-slate-900 via-sky-950 to-slate-900 text-white p-4 flex flex-col justify-between shadow-xs border border-sky-900/60 group">
+            {/* Card 3: Smart fleet card */}
+            <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white px-4 py-3.5 flex flex-col justify-between shadow-[0_10px_30px_rgba(15,23,42,0.35)] border border-sky-900/60 min-h-[170px] group">
               <div className="flex items-center justify-between z-10">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/40">
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/40 tracking-[0.12em]">
                   SMART FLEET
                 </span>
                 <Link
                   to="/purifiers"
-                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-[#00E5FF] hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-[#00E5FF] hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
                 >
                   <ArrowUpRight size={14} />
                 </Link>
               </div>
 
-              <div className="my-3 z-10">
-                <div className="text-lg font-black leading-tight text-white">
+              <div className="space-y-1.5 z-10 pt-2">
+                <div className="text-[21px] font-black leading-tight text-white">
                   5 Campus Nodes
                 </div>
-                <p className="text-[11px] text-sky-200/80 mt-0.5">
+                <p className="text-[11px] text-sky-200/80 leading-relaxed">
                   Live IoT Telemetry &amp; UV Filtration
                 </p>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] text-sky-300/90 z-10 pt-2 border-t border-white/10">
+              <div className="flex items-end justify-between gap-2 text-[10px] text-sky-300/90 z-10 pt-2 border-t border-white/10">
                 <span>Today's Flow: 24,000L</span>
                 <span className="text-emerald-400 font-bold font-mono">99.9% Uptime</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Bookings / Active Purifier Tasks (Matching Reference Image bottom cards) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
-                Active Purifier Maintenance &amp; Tasks
-              </h3>
-              <Link
-                to="/maintenance"
-                className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-sky-600 flex items-center gap-1"
-              >
-                <span>Check All</span>
-                <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Task 1 Card (Matching "Award Ceremony" Card from Reference) */}
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                      RO Filter Flush &amp; Purity Audit
-                    </h4>
-                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                      12:30 &ndash; 15:45 &bull; WP-001 Admin Complex
-                    </div>
-                  </div>
-                  {/* Toggle Switch */}
-                  <button
-                    onClick={() => setTask1Active(!task1Active)}
-                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                      task1Active ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                        task1Active ? 'translate-x-4' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/60">
-                    S.B. Jain
-                  </span>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border border-teal-200/60">
-                    Scheduled
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                  {/* Technician Avatars */}
-                  <div className="flex items-center -space-x-2">
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
-                      alt="Tech 1"
-                      className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 object-cover"
-                    />
-                    <img
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80"
-                      alt="Tech 2"
-                      className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 object-cover"
-                    />
-                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] font-bold text-slate-600 dark:text-slate-300">
-                      +2
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => navigate('/maintenance')}
-                      className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                    >
-                      <Edit2 size={12} />
-                    </button>
-                    <button
-                      onClick={() => navigate('/purifiers/1')}
-                      className="w-7 h-7 rounded-full bg-teal-700 text-white flex items-center justify-center hover:bg-teal-800 transition-colors"
-                    >
-                      <ArrowUpRight size={13} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Task 2 Card (Matching "Design Discussion" Card from Reference) */}
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                      AI Vision Contaminant Review
-                    </h4>
-                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                      16:30 &ndash; 20:00 &bull; WP-004 Science Complex
-                    </div>
-                  </div>
-                  {/* Toggle Switch */}
-                  <button
-                    onClick={() => setTask2Active(!task2Active)}
-                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                      task2Active ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                        task2Active ? 'translate-x-4' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60">
-                    AI Vision
-                  </span>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60">
-                    Inspection
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                  {/* Technician Avatars */}
-                  <div className="flex items-center -space-x-2">
-                    <img
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80"
-                      alt="Tech 3"
-                      className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 object-cover"
-                    />
-                    <img
-                      src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80"
-                      alt="Tech 4"
-                      className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 object-cover"
-                    />
-                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] font-bold text-slate-600 dark:text-slate-300">
-                      +1
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => navigate('/ai-detection')}
-                      className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                    >
-                      <Edit2 size={12} />
-                    </button>
-                    <button
-                      onClick={() => navigate('/ai-detection')}
-                      className="w-7 h-7 rounded-full bg-teal-700 text-white flex items-center justify-center hover:bg-teal-800 transition-colors"
-                    >
-                      <ArrowUpRight size={13} />
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -601,13 +470,11 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* =======================================================================
-            RIGHT COLUMN: Calendar & Maintenance Schedule Panel (Span 4/5)
-            (Matching the Circled Section from Reference Image)
-           ======================================================================= */}
+        {/* Calendar and schedule panel */}
         <div className="lg:col-span-5 xl:col-span-4 w-full lg:sticky lg:top-4">
           <RightSchedulePanel />
         </div>
+
       </div>
     </div>
   );

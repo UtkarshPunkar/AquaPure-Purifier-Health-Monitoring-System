@@ -16,7 +16,15 @@ const router = Router();
 
 // Auth
 router.post('/auth/login', authCtrl.login);
+router.post('/auth/send-otp', authCtrl.sendOtp);
+router.post('/auth/verify-otp', authCtrl.verifyOtpCode);
+router.post('/auth/signup', authCtrl.signup);
+router.post('/auth/register', authCtrl.signup);
+router.post('/auth/reset-password', authCtrl.resetPassword);
 router.get('/auth/me', authCtrl.getMe);
+router.put('/auth/profile', authCtrl.updateProfile);
+router.put('/auth/update-profile', authCtrl.updateProfile);
+router.post('/auth/change-password', authCtrl.changePassword);
 
 // Dashboard Overview / Summary
 router.get('/dashboard/overview', telemetryCtrl.getDashboardOverview);
@@ -27,8 +35,10 @@ router.get('/purifiers', purifierCtrl.getAllPurifiers);
 router.get('/purifiers/:id', purifierCtrl.getPurifierById);
 router.get('/purifiers/:id/readings', purifierCtrl.getPurifierReadings);
 
-// IoT Ingestion (Raspberry Pi Pico W standard endpoint)
+// IoT Ingestion & Hardware Status (Raspberry Pi Pico W standard endpoint)
 router.post('/iot/sensor-data', telemetryCtrl.ingestIotSensorData);
+router.post('/iot/disconnect', telemetryCtrl.disconnectHardware);
+router.post('/iot/hardware-status', telemetryCtrl.setHardwareStatus);
 router.post('/devices/readings', telemetryCtrl.ingestPicoWReading);
 
 // Simulation Controls
@@ -69,9 +79,23 @@ router.get('/devices', deviceCtrl.getAllDevices);
 router.get('/devices/:deviceId', deviceCtrl.getDeviceById);
 router.patch('/devices/:deviceId/status', deviceCtrl.updateDeviceStatus);
 
-// Camera / ESP32-CAM
+// Camera / ESP32-CAM Live Feed & Hardware Gateway
 router.get('/camera', cameraCtrl.getAllCameras);
+router.get('/camera/status', cameraCtrl.getCameraStatus);
+router.get('/camera/status/:deviceId', cameraCtrl.getCameraStatus);
+router.get('/camera/stream', cameraCtrl.streamCamera);
+router.get('/camera/stream/:deviceId', cameraCtrl.streamCamera);
+router.get('/camera/live-frame', cameraCtrl.getLiveFrame);
+router.get('/camera/live-frame/:deviceId', cameraCtrl.getLiveFrame);
+router.get('/camera/snapshot-image/:id', cameraCtrl.getSnapshotImage);
+router.post('/camera/config', cameraCtrl.updateCameraConfig);
+router.post('/camera/auto-discover', cameraCtrl.autoDiscoverCamera);
+router.post('/camera/snapshot', cameraCtrl.captureSnapshot);
 router.post('/camera/:deviceId/snapshot', cameraCtrl.captureSnapshot);
+router.post('/camera/upload-frame', cameraCtrl.uploadCameraFrame);
+router.post('/camera/upload-frame/:deviceId', cameraCtrl.uploadCameraFrame);
+router.post('/camera/disconnect', cameraCtrl.disconnectCameraDirect);
+router.post('/camera/disconnect/:deviceId', cameraCtrl.disconnectCameraDirect);
 
 // Exports
 router.get('/export/telemetry', exportCtrl.exportTelemetryCsv);

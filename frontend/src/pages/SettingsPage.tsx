@@ -3,50 +3,34 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../api/client';
 import {
-  Settings,
-  ShieldCheck,
-  Cpu,
-  Sliders,
   Bell,
   Save,
   CheckCircle2,
-  Building,
-  Info,
   Sun,
   Moon,
   Users,
-  Code2,
-  Copy,
-  KeyRound,
-  Sparkles,
-  Smartphone,
-  Mail,
   SlidersHorizontal,
+  Lock,
+  Crown,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'organization' | 'notifications' | 'thresholds' | 'appearance' | 'iot'>('thresholds');
+  const isTechHead = user?.role === 'TECHNICAL_HEAD' || user?.email === 'utkarshpunkar7@gmail.com';
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'thresholds' | 'appearance'>('thresholds');
   const [isSaved, setIsSaved] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedToken, setCopiedToken] = useState(false);
 
   // Form State
   const [profile, setProfile] = useState({
-    name: user?.name || 'Campus Administrator',
-    email: user?.email || 'admin@aquapure.edu',
-    role: user?.role || 'ADMIN',
-    department: 'Central Water & Facility Operations',
-    phone: '+91 98765 43210',
-  });
-
-  const [organization, setOrganization] = useState({
-    campusName: 'S.B. Jain Institute of Technology And Research',
-    campusAddress: 'Katol Road, Nagpur, Maharashtra 441501',
-    facilityLead: 'Dr. S. L. Badjate',
-    contactEmail: 'water-monitoring@sbjit.edu.in',
+    name: user?.name || 'Utkarsh Punkar',
+    email: user?.email || 'utkarshpunkar7@gmail.com',
+    role: user?.role || 'TECHNICAL_HEAD',
+    department: 'Department of Artificial Intelligence & Systems',
+    phone: '+91 8010379670',
   });
 
   const [notifications, setNotifications] = useState({
@@ -68,10 +52,18 @@ export const SettingsPage: React.FC = () => {
     filterCritical: 20,
   });
 
-  const [apiToken, setApiToken] = useState('aqp_live_9f8a3c42e1b87d60514a382c719e');
+  useEffect(() => {
+    if (user) {
+      setProfile((prev) => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
-    // Fetch settings from server
     api.getSettings().then((s) => {
       if (s) {
         setThresholds({
@@ -96,106 +88,29 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (activeTab === 'thresholds' && !isTechHead) {
+      alert('Only Technical Head (Utkarsh Punkar) has authorization to modify safety thresholds.');
+      return;
+    }
+
     try {
-      await api.updateSettings({
-        ...thresholds,
-        emailAlerts: notifications.emailAlerts,
-        smsAlerts: notifications.smsAlerts,
-        pushAlerts: notifications.pushNotifications,
-      });
+      if (activeTab === 'profile') {
+        if (profile.name.trim()) {
+          await updateProfile(profile.name.trim());
+        }
+      } else {
+        await api.updateSettings({
+          ...thresholds,
+          emailAlerts: notifications.emailAlerts,
+          smsAlerts: notifications.smsAlerts,
+          pushAlerts: notifications.pushNotifications,
+        });
+      }
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save settings:', err);
-    }
-  };
-
-  const picoScript = `# ==============================================================================
-# AquaPure IoT - Raspberry Pi Pico W Telemetry Streamer (MicroPython)
-# Hardware: Raspberry Pi Pico W + Analog pH, TDS, Turbidity, DS18B20 Temp
-# ==============================================================================
-
-import network
-import urequests
-import utime
-import machine
-
-# 1. Wi-Fi Configuration
-SSID = "Campus_WiFi_IoT"
-PASSWORD = "SecurePassword123"
-
-# 2. AquaPure IoT Backend Endpoint
-API_URL = "http://192.168.1.100:5000/api/iot/sensor-data"
-API_TOKEN = "${apiToken}"
-PURIFIER_ID = "WP-001"
-
-# 3. ADC Sensor Pin Mappings
-PIN_PH = machine.ADC(26)         # GP26 / ADC0
-PIN_TDS = machine.ADC(27)        # GP27 / ADC1
-PIN_TURBIDITY = machine.ADC(28)  # GP28 / ADC2
-LED_STATUS = machine.Pin("LED", machine.Pin.OUT)
-
-def connect_wifi():
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    if not wlan.isconnected():
-        print("Connecting to Wi-Fi...")
-        wlan.connect(SSID, PASSWORD)
-        while not wlan.isconnected():
-            LED_STATUS.toggle()
-            utime.sleep(0.5)
-    print("Connected! IP:", wlan.ifconfig()[0])
-    LED_STATUS.value(1)
-
-def read_telemetry():
-    # Convert 16-bit ADC (0-65535) to calibrated engineering values
-    raw_ph = PIN_PH.read_u16()
-    ph_voltage = (raw_ph / 65535.0) * 3.3
-    ph_val = round(7.0 + ((2.5 - ph_voltage) * 3.5), 2)
-
-    raw_tds = PIN_TDS.read_u16()
-    tds_voltage = (raw_tds / 65535.0) * 3.3
-    tds_val = round((133.42 * (tds_voltage**3) - 255.86 * (tds_voltage**2) + 857.39 * tds_voltage) * 0.5, 0)
-
-    raw_turb = PIN_TURBIDITY.read_u16()
-    turb_val = round((1.0 - (raw_turb / 65535.0)) * 5.0, 2)
-    temp_val = 24.5
-    water_level_val = 85
-
-    return {
-        "purifier_id": PURIFIER_ID,
-        "ph": max(0.0, min(14.0, ph_val)),
-        "tds": max(0.0, tds_val),
-        "turbidity": max(0.0, turb_val),
-        "temperature": temp_val,
-        "water_level": water_level_val
-    }
-
-connect_wifi()
-
-while True:
-    try:
-        payload = read_telemetry()
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + API_TOKEN
-        }
-        res = urequests.post(API_URL, json=payload, headers=headers)
-        print("Telemetry Synced! HTTP Status:", res.status_code)
-        res.close()
-    except Exception as e:
-        print("Transmission Error:", e)
-    utime.sleep(5)  # 5-second polling interval
-`;
-
-  const copyToClipboard = (text: string, type: 'code' | 'token') => {
-    navigator.clipboard.writeText(text);
-    if (type === 'code') {
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
-    } else {
-      setCopiedToken(true);
-      setTimeout(() => setCopiedToken(false), 2000);
+      alert(err.response?.data?.error || 'Failed to save settings');
     }
   };
 
@@ -207,9 +122,6 @@ while True:
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             System & Threshold Configuration
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Configure safety thresholds, organization profile, alert channels, and copy Raspberry Pi Pico W IoT firmware.
-          </p>
         </div>
 
         {isSaved && (
@@ -225,10 +137,8 @@ while True:
         {[
           { id: 'thresholds', label: 'Threshold Limits', icon: SlidersHorizontal },
           { id: 'profile', label: 'User Profile', icon: Users },
-          { id: 'organization', label: 'Organization & Facility', icon: Building },
           { id: 'notifications', label: 'Notifications & Alerts', icon: Bell },
           { id: 'appearance', label: 'Appearance & Theme', icon: Sun },
-          { id: 'iot', label: 'API & Raspberry Pi Pico W IoT', icon: Cpu },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -236,7 +146,7 @@ while True:
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-sky-600 text-white font-bold shadow-xs'
                   : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -254,14 +164,22 @@ while True:
         {activeTab === 'thresholds' && (
           <div className="space-y-5 animate-in fade-in">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-              <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <SlidersHorizontal size={16} className="text-sky-600 dark:text-sky-400" />
-                  Water Safety & Sensor Alarm Thresholds
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Set baseline parameter boundaries derived from WHO and IS 10500 standards.
-                </p>
+              <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <SlidersHorizontal size={16} className="text-sky-600 dark:text-sky-400" />
+                    Water Safety & Sensor Alarm Thresholds
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Set baseline parameter boundaries derived from WHO and IS 10500 standards.
+                  </p>
+                </div>
+                {!isTechHead && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                    <Lock size={13} />
+                    <span>View-only (Controlled by Technical Head)</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
@@ -273,9 +191,10 @@ while True:
                   <input
                     type="number"
                     step="0.1"
+                    disabled={!isTechHead}
                     value={thresholds.phMin}
                     onChange={(e) => setThresholds({ ...thresholds, phMin: parseFloat(e.target.value) || 6.5 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-slate-400 block">Nominal safe lower bound</span>
                 </div>
@@ -288,9 +207,10 @@ while True:
                   <input
                     type="number"
                     step="0.1"
+                    disabled={!isTechHead}
                     value={thresholds.phMax}
                     onChange={(e) => setThresholds({ ...thresholds, phMax: parseFloat(e.target.value) || 8.5 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-slate-400 block">Nominal safe upper bound</span>
                 </div>
@@ -302,9 +222,10 @@ while True:
                   </label>
                   <input
                     type="number"
+                    disabled={!isTechHead}
                     value={thresholds.tdsMax}
                     onChange={(e) => setThresholds({ ...thresholds, tdsMax: parseInt(e.target.value) || 300 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-slate-400 block">WHO potability recommendation</span>
                 </div>
@@ -317,9 +238,10 @@ while True:
                   <input
                     type="number"
                     step="0.1"
+                    disabled={!isTechHead}
                     value={thresholds.turbidityMax}
                     onChange={(e) => setThresholds({ ...thresholds, turbidityMax: parseFloat(e.target.value) || 5.0 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-slate-400 block">Suspended particulate ceiling</span>
                 </div>
@@ -334,9 +256,10 @@ while True:
                   <input
                     type="number"
                     step="0.5"
+                    disabled={!isTechHead}
                     value={thresholds.tempMin}
                     onChange={(e) => setThresholds({ ...thresholds, tempMin: parseFloat(e.target.value) || 10.0 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                 </div>
 
@@ -348,9 +271,10 @@ while True:
                   <input
                     type="number"
                     step="0.5"
+                    disabled={!isTechHead}
                     value={thresholds.tempMax}
                     onChange={(e) => setThresholds({ ...thresholds, tempMax: parseFloat(e.target.value) || 35.0 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                 </div>
 
@@ -361,9 +285,10 @@ while True:
                   </label>
                   <input
                     type="number"
+                    disabled={!isTechHead}
                     value={thresholds.filterWarning}
                     onChange={(e) => setThresholds({ ...thresholds, filterWarning: parseInt(e.target.value) || 40 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-amber-600 dark:text-amber-400 block">Triggers &quot;Replace Soon&quot;</span>
                 </div>
@@ -375,9 +300,10 @@ while True:
                   </label>
                   <input
                     type="number"
+                    disabled={!isTechHead}
                     value={thresholds.filterCritical}
                     onChange={(e) => setThresholds({ ...thresholds, filterCritical: parseInt(e.target.value) || 20 })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold disabled:opacity-75"
                   />
                   <span className="font-sans text-[10px] text-rose-600 dark:text-rose-400 block">Immediate service alert</span>
                 </div>
@@ -389,11 +315,16 @@ while True:
         {/* TAB 2: PROFILE SETTINGS */}
         {activeTab === 'profile' && (
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 animate-in fade-in">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Users size={16} className="text-sky-600 dark:text-sky-400" />
                 User Profile & Credentials
               </h3>
+              {isTechHead && (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-sky-500/20 to-blue-500/20 text-sky-600 dark:text-[#00E5FF] border border-sky-400/40 flex items-center gap-1">
+                  <Crown size={12} className="text-amber-400" /> Technical Head
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
@@ -408,12 +339,12 @@ while True:
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address (Registered)</label>
                 <input
                   type="email"
+                  readOnly
                   value={profile.email}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono"
                 />
               </div>
 
@@ -440,63 +371,7 @@ while True:
           </div>
         )}
 
-        {/* TAB 3: ORGANIZATION SETTINGS */}
-        {activeTab === 'organization' && (
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 animate-in fade-in">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Building size={16} className="text-sky-600 dark:text-sky-400" />
-                Campus & Facility Details
-              </h3>
-            </div>
-
-            <div className="space-y-3 text-xs font-sans">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Campus Institution Name</label>
-                <input
-                  type="text"
-                  value={organization.campusName}
-                  onChange={(e) => setOrganization({ ...organization, campusName: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Campus Address</label>
-                <input
-                  type="text"
-                  value={organization.campusAddress}
-                  onChange={(e) => setOrganization({ ...organization, campusAddress: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Facility Operations Lead</label>
-                  <input
-                    type="text"
-                    value={organization.facilityLead}
-                    onChange={(e) => setOrganization({ ...organization, facilityLead: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Operations Contact Email</label>
-                  <input
-                    type="email"
-                    value={organization.contactEmail}
-                    onChange={(e) => setOrganization({ ...organization, contactEmail: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: NOTIFICATIONS */}
+        {/* TAB 3: NOTIFICATIONS */}
         {activeTab === 'notifications' && (
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 animate-in fade-in">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -563,7 +438,7 @@ while True:
           </div>
         )}
 
-        {/* TAB 5: APPEARANCE */}
+        {/* TAB 4: APPEARANCE */}
         {activeTab === 'appearance' && (
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 animate-in fade-in">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -578,7 +453,7 @@ while True:
                 <button
                   type="button"
                   onClick={() => setTheme('light')}
-                  className={`p-4 rounded-2xl border flex-1 text-center transition-all ${
+                  className={`p-4 rounded-2xl border flex-1 text-center transition-all cursor-pointer ${
                     theme === 'light'
                       ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/60 shadow-sm'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
@@ -592,7 +467,7 @@ while True:
                 <button
                   type="button"
                   onClick={() => setTheme('dark')}
-                  className={`p-4 rounded-2xl border flex-1 text-center transition-all ${
+                  className={`p-4 rounded-2xl border flex-1 text-center transition-all cursor-pointer ${
                     theme === 'dark'
                       ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/60 shadow-sm'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
@@ -607,68 +482,6 @@ while True:
           </div>
         )}
 
-        {/* TAB 6: API & RASPBERRY PI PICO W IOT */}
-        {activeTab === 'iot' && (
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-5 animate-in fade-in">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Cpu size={16} className="text-sky-600 dark:text-sky-400" />
-                  Raspberry Pi Pico W Hardware Integration & REST API
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Connect real physical IoT sensor nodes using standard HTTP REST requests.
-                </p>
-              </div>
-            </div>
-
-            {/* IoT Token Bar */}
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                IoT Ingestion Security Token (Bearer Auth)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={apiToken}
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-800 dark:text-slate-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(apiToken, 'token')}
-                  className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                >
-                  <Copy size={13} />
-                  <span>{copiedToken ? 'Copied!' : 'Copy Token'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* MicroPython Code Viewer */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Code2 size={15} className="text-sky-500" />
-                  <span>MicroPython Ingestion Script (`main.py` for Raspberry Pi Pico W)</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(picoScript, 'code')}
-                  className="px-3 py-1 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
-                >
-                  <Copy size={12} />
-                  <span>{copiedCode ? 'Copied to Clipboard!' : 'Copy MicroPython Script'}</span>
-                </button>
-              </div>
-
-              <pre className="p-4 rounded-xl bg-slate-950 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-96 border border-slate-800 shadow-inner">
-                <code>{picoScript}</code>
-              </pre>
-            </div>
-          </div>
-        )}
-
         {/* Save Bar */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
           <div className="text-xs text-slate-400 font-mono">
@@ -677,7 +490,8 @@ while True:
 
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-sky-600/20 transition-all"
+            disabled={activeTab === 'thresholds' && !isTechHead}
+            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-sky-600/20 transition-all cursor-pointer"
           >
             <Save size={15} />
             <span>Save Configuration</span>
@@ -687,3 +501,5 @@ while True:
     </div>
   );
 };
+
+export default SettingsPage;

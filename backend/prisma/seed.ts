@@ -35,59 +35,23 @@ async function main() {
     },
   });
 
-  // 2. Users (Admin, Technical Head, Maintenance Staff, Viewer)
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  // 2. Technical Head (Utkarsh Punkar - Super Administrator & Lead Architect)
   const now = new Date();
+  const techHeadHash = await bcrypt.hash('00000', 10);
 
   await prisma.user.create({
     data: {
-      name: 'Mithilesh Kose',
-      email: 'mithilesh@aquapure.edu',
-      passwordHash,
-      role: 'ADMIN',
-      status: 'ACTIVE',
-      lastLogin: new Date(now.getTime() - 10 * 60 * 1000),
-      organizationId: org.id,
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: 'Vedant Bhanarkar',
-      email: 'vedant@aquapure.edu',
-      passwordHash,
+      name: 'Utkarsh Punkar',
+      email: 'utkarshpunkar7@gmail.com',
+      passwordHash: techHeadHash,
       role: 'TECHNICAL_HEAD',
       status: 'ACTIVE',
-      lastLogin: new Date(now.getTime() - 45 * 60 * 1000),
+      lastLogin: now,
       organizationId: org.id,
     },
   });
 
-  await prisma.user.create({
-    data: {
-      name: 'Rajesh Sharma',
-      email: 'rajesh@aquapure.edu',
-      passwordHash,
-      role: 'MAINTENANCE_STAFF',
-      status: 'ACTIVE',
-      lastLogin: new Date(now.getTime() - 3 * 3600 * 1000),
-      organizationId: org.id,
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: 'Priya Verma',
-      email: 'priya@aquapure.edu',
-      passwordHash,
-      role: 'VIEWER',
-      status: 'ACTIVE',
-      lastLogin: new Date(now.getTime() - 24 * 3600 * 1000),
-      organizationId: org.id,
-    },
-  });
-
-  console.log('✅ Created organization and 4 role-based user accounts');
+  console.log('✅ Created root Technical Head account for Utkarsh Punkar (utkarshpunkar7@gmail.com)');
 
   // 3. System Settings
   await prisma.systemSetting.create({
@@ -106,34 +70,36 @@ async function main() {
       pushAlerts: true,
       apiToken: 'aquapure_iot_live_sec_token_983742',
     },
-    // 4. 5 Comprehensive Purifiers across Campus
+  });
+
+  // 4. 5 Comprehensive Purifiers across Campus
   const purifierDefinitions = [
     {
-      purifierCode: 'WP-001',
-      name: 'Main Administrative Center Purifier',
-      location: 'Main Administrative Block - Ground Floor Foyer',
-      building: 'Main Administrative Block',
-      floor: 'Ground Floor, Lobby West',
+      purifierCode: 'WP-1',
+      name: 'EMTech Dept Purifier (2nd Floor)',
+      location: 'EMTech Dept 2nd floor',
+      building: 'EMTech Dept',
+      floor: '2nd Floor',
       deviceId: 'PICO-W-001',
-      status: 'HEALTHY',
+      status: 'INACTIVE',
       isPhysicalHardware: true,
       modelType: 'Commercial Multi-Stage RO + UV + Active Carbon',
       baseHealth: 88,
       baseDegradation: 0.35,
-      baseTds: 145,
-      baseTurbidity: 0.42,
-      baseFlow: 2.5,
-      basePh: 7.25,
-      baseTemp: 23.4,
+      baseTds: 0,
+      baseTurbidity: 0,
+      baseFlow: 0,
+      basePh: 0,
+      baseTemp: 0,
       waterLevel: 84,
       profile: 'NORMAL',
     },
     {
-      purifierCode: 'WP-002',
-      name: 'Central Library Water Station',
-      location: 'Central Library - 2nd Floor Reading Room',
-      building: 'Knowledge Center',
-      floor: 'Floor 2, Hall B',
+      purifierCode: 'WP-2',
+      name: 'EMTech Dept Purifier (3rd Floor)',
+      location: 'EMTech Dept 3rd floor',
+      building: 'EMTech Dept',
+      floor: '3rd Floor',
       deviceId: 'PICO-W-002',
       status: 'HEALTHY',
       isPhysicalHardware: false,
@@ -149,11 +115,11 @@ async function main() {
       profile: 'OPTIMAL',
     },
     {
-      purifierCode: 'WP-003',
-      name: 'Computer Science Dept Purifier',
-      location: 'Department of Computer Science - Block C',
-      building: 'Computer Science Block',
-      floor: '3rd Floor, Server Corridor',
+      purifierCode: 'WP-3',
+      name: 'ETC Dept Purifier (Ground Floor)',
+      location: 'ETC Dept Ground floor',
+      building: 'ETC Dept',
+      floor: 'Ground Floor',
       deviceId: 'PICO-W-003',
       status: 'WARNING',
       isPhysicalHardware: false,
@@ -169,11 +135,11 @@ async function main() {
       profile: 'DEGRADING_MEMBRANE',
     },
     {
-      purifierCode: 'WP-004',
-      name: 'Faculty & Executive Lounge Purifier',
-      location: 'Administrative Wing - Faculty Common Hall',
-      building: 'Admin Annex',
-      floor: '1st Floor, Suite 108',
+      purifierCode: 'WP-4',
+      name: 'CSE Dept Purifier (1st Floor)',
+      location: 'CSE Dept 1st floor',
+      building: 'CSE Dept',
+      floor: '1st Floor',
       deviceId: 'PICO-W-004',
       status: 'HEALTHY',
       isPhysicalHardware: false,
@@ -189,11 +155,11 @@ async function main() {
       profile: 'NORMAL',
     },
     {
-      purifierCode: 'WP-005',
-      name: 'Campus Main Cafeteria Dispenser',
-      location: 'Food Court & Dining Complex - Main Counter',
-      building: 'Cafeteria Block',
-      floor: 'Ground Floor, Dispenser 1',
+      purifierCode: 'WP-5',
+      name: 'MBA Dept Purifier (2nd Floor)',
+      location: 'MBA Dept 2nd floor',
+      building: 'MBA Dept',
+      floor: '2nd Floor',
       deviceId: 'PICO-W-005',
       status: 'CRITICAL',
       isPhysicalHardware: false,
@@ -253,7 +219,7 @@ async function main() {
     });
 
     // Device Twin
-    const isOffline = def.status === 'OFFLINE';
+    const isOffline = def.status === 'OFFLINE' || def.status === 'INACTIVE';
     await prisma.device.create({
       data: {
         deviceId: def.deviceId,
@@ -262,11 +228,11 @@ async function main() {
         firmwareVersion: 'v2.4.1-pico-w',
         ipAddress: `192.168.1.${100 + parseInt(def.purifierCode.split('-')[1])}`,
         macAddress: `28:CD:C1:04:8A:${def.purifierCode.split('-')[1]}`,
-        wifiRssi: isOffline ? -98 : -55 - Math.floor(Math.random() * 15),
+        wifiRssi: isOffline ? 0 : -55 - Math.floor(Math.random() * 15),
         lastSeen: isOffline ? new Date(now.getTime() - 48 * 3600 * 1000) : now,
-        status: isOffline ? 'OFFLINE' : 'ONLINE',
-        oledStatus: def.status === 'CRITICAL' ? 'WARN: SERV DUE | TDS 465' : isOffline ? 'OFFLINE - NO SIGNAL' : 'ONLINE | TDS NOMINAL',
-        ledStatus: def.status === 'CRITICAL' ? 'RED_CRITICAL' : def.status === 'WARNING' ? 'YELLOW_WARNING' : 'GREEN_NORMAL',
+        status: def.status === 'INACTIVE' ? 'INACTIVE' : isOffline ? 'OFFLINE' : 'ONLINE',
+        oledStatus: def.status === 'INACTIVE' ? 'HARDWARE DISCONNECTED' : def.status === 'CRITICAL' ? 'WARN: SERV DUE | TDS 465' : isOffline ? 'OFFLINE - NO SIGNAL' : 'ONLINE | TDS NOMINAL',
+        ledStatus: def.status === 'INACTIVE' ? 'OFF' : def.status === 'CRITICAL' ? 'RED_CRITICAL' : def.status === 'WARNING' ? 'YELLOW_WARNING' : 'GREEN_NORMAL',
         buzzerStatus: def.status === 'CRITICAL',
       },
     });
@@ -442,7 +408,7 @@ async function main() {
         issue: 'Scheduled Periodic Sanitization & TDS Calibration',
         priority: 'LOW',
         type: 'ROUTINE_CHECKUP',
-        technician: 'Rajesh Sharma',
+        technician: 'Campus Maintenance Tech',
         cost: 45.0,
         notes: 'Routine pressure sanitization, UV lamp check, and probe recalibration.',
         status: 'COMPLETED',
@@ -464,7 +430,7 @@ async function main() {
               : 'Sediment Pre-Filter Flush & Pressure Regulating Valve Inspection',
           priority: def.status === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
           type: def.status === 'CRITICAL' ? 'EMERGENCY_REPAIR' : 'MEMBRANE_FLUSH',
-          technician: 'Rajesh Sharma',
+          technician: 'Campus Maintenance Tech',
           cost: def.status === 'CRITICAL' ? 185.0 : 65.0,
           notes: 'High priority dispatch assigned to technician on duty.',
           status: def.status === 'CRITICAL' ? 'SCHEDULED' : 'PENDING',
@@ -480,7 +446,7 @@ async function main() {
 
   const aiSamples = [
     {
-      purifierCode: 'WP-004',
+      purifierCode: 'WP-4',
       detectedObject: 'Algae',
       confidence: 94.2,
       riskLevel: 'CRITICAL',
@@ -490,7 +456,7 @@ async function main() {
       status: 'ACTION_REQUIRED',
     },
     {
-      purifierCode: 'WP-005',
+      purifierCode: 'WP-5',
       detectedObject: 'Worm',
       confidence: 91.5,
       riskLevel: 'CRITICAL',
@@ -500,7 +466,7 @@ async function main() {
       status: 'ACTION_REQUIRED',
     },
     {
-      purifierCode: 'WP-003',
+      purifierCode: 'WP-3',
       detectedObject: 'Insect',
       confidence: 88.4,
       riskLevel: 'WARNING',
@@ -510,7 +476,7 @@ async function main() {
       status: 'REVIEWED',
     },
     {
-      purifierCode: 'WP-001',
+      purifierCode: 'WP-1',
       detectedObject: 'Clean Water',
       confidence: 98.7,
       riskLevel: 'SAFE',
@@ -520,7 +486,7 @@ async function main() {
       status: 'RESOLVED',
     },
     {
-      purifierCode: 'WP-002',
+      purifierCode: 'WP-2',
       detectedObject: 'Clean Water',
       confidence: 99.1,
       riskLevel: 'SAFE',

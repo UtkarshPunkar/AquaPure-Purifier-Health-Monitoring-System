@@ -34,9 +34,9 @@ model User {
 
 model Purifier {
   id                 String              @id @default(uuid())
-  purifierCode       String              @unique // e.g. WP-001 or PUR-001
-  name               String              // e.g. Main Administrative Center Purifier
-  location           String              // e.g. Main Building - Block A
+  purifierCode       String              @unique // e.g. WP-1 or PUR-001
+  name               String              // e.g. EMTech Dept Purifier (2nd Floor)
+  location           String              // e.g. EMTech Dept 2nd floor
   building           String              // e.g. Engineering Block
   floor              String              // e.g. Ground Floor, Room 102
   organizationId     String

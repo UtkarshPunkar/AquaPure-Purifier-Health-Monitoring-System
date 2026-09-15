@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../api/client';
 import {
   Droplets,
   Lock,
   Mail,
   ArrowRight,
+  ArrowLeft,
   Moon,
   Sun,
   Eye,
@@ -37,6 +39,9 @@ import {
   Linkedin,
   Instagram,
   Github,
+  KeyRound,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { ScrollReveal } from '../components/common/ScrollReveal';
@@ -137,6 +142,19 @@ export const LoginPage: React.FC = () => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Auto-open modal if navigated with query param or direct login action
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'signup' || tab === 'register') {
+      setAuthTab('signup');
+      setIsAuthModalOpen(true);
+    } else if (tab === 'login' || params.get('open') === 'true') {
+      setAuthTab('login');
+      setIsAuthModalOpen(true);
+    }
+  }, []);
+
   // Scroll listener for dynamic glass navbar blur & elevation
   useEffect(() => {
     const handleScroll = () => {
@@ -146,29 +164,56 @@ export const LoginPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Login Form State
-  const [email, setEmail] = useState('admin@aquapure.edu');
-  const [password, setPassword] = useState('Admin@123');
+  // Login Form State - NO DEFAULT CREDENTIALS
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccessMessage, setLoginSuccessMessage] = useState<string | null>(null);
   const [isLoginLoading, setIsLoginLoading] = useState(false);
 
-  // Sign Up Form State
+  // Sign Up Form State - 3-Step OTP Verification Flow
+  const [signupStep, setSignupStep] = useState<1 | 2 | 3>(1);
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [signupOrg, setSignupOrg] = useState('');
+  const [signupOrg, setSignupOrg] = useState('S.B. Jain Campus');
+  const [signupOtp, setSignupOtp] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [signupRole, setSignupRole] = useState<UserRole>('VIEWER');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
+  const [signupSimulatedOtp, setSignupSimulatedOtp] = useState<string | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isSignupLoading, setIsSignupLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
-  // Forgot Password Modal State
+  // Forgot Password Modal State with 2-Step OTP Reset
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSimulatedOtp, setForgotSimulatedOtp] = useState<string | null>(null);
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
 
-  // Contacts Data (as requested)
+  // Resend Countdown Timer
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // Contacts Data
   const contactsList = [
     {
       name: 'Utkarsh Punkar',
@@ -207,7 +252,11 @@ export const LoginPage: React.FC = () => {
   const handleOpenAuth = (tab: 'login' | 'signup') => {
     setAuthTab(tab);
     setLoginError(null);
+    setLoginSuccessMessage(null);
     setSignupError(null);
+    setSignupStep(1);
+    setSignupOtp('');
+    setSignupSimulatedOtp(null);
     setIsAuthModalOpen(true);
     setIsMobileMenuOpen(false);
   };
@@ -215,24 +264,108 @@ export const LoginPage: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    setLoginSuccessMessage(null);
+    if (!email.trim() || !password) {
+      setLoginError('Please enter your email and password.');
+      return;
+    }
     setIsLoginLoading(true);
     try {
-      await login(email, password, rememberMe);
+      await login(email.trim(), password, rememberMe);
       setIsAuthModalOpen(false);
       navigate('/');
     } catch (err: any) {
-      setLoginError(err.response?.data?.error || 'Invalid credentials. Please verify your login details.');
+      setLoginError(err.response?.data?.error || 'Invalid credentials. Please verify your email and password.');
     } finally {
       setIsLoginLoading(false);
     }
   };
 
-  const handleSignupSubmit = async (e: React.FormEvent) => {
+  // Step 1: Request 6-digit OTP for signup
+  const handleSendSignupOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
+    if (!signupName.trim()) {
+      setSignupError('Please enter your full name.');
+      return;
+    }
+    if (!signupEmail.trim() || !signupEmail.includes('@')) {
+      setSignupError('Please enter a valid Gmail / Email address.');
+      return;
+    }
+    setIsSendingOtp(true);
+    try {
+      const res = await api.sendOtp(signupEmail.trim().toLowerCase(), 'signup');
+      if (res.otp) {
+        setSignupSimulatedOtp(res.otp);
+      }
+      setSignupStep(2);
+      setResendTimer(60);
+    } catch (err: any) {
+      setSignupError(err.response?.data?.error || 'Failed to send verification code. Please check your email.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Step 2: Verify 6-digit OTP
+  const handleVerifySignupOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError(null);
+    if (signupOtp.trim().length !== 6) {
+      setSignupError('Please enter the 6-digit verification code.');
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      await api.verifyOtp(signupEmail.trim().toLowerCase(), signupOtp.trim());
+      setSignupStep(3);
+    } catch (err: any) {
+      setSignupError(err.response?.data?.error || 'Invalid OTP verification code.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Resend OTP
+  const handleResendSignupOtp = async () => {
+    if (resendTimer > 0) return;
+    setSignupError(null);
+    setIsSendingOtp(true);
+    try {
+      const res = await api.sendOtp(signupEmail.trim().toLowerCase(), 'signup');
+      if (res.otp) {
+        setSignupSimulatedOtp(res.otp);
+      }
+      setResendTimer(60);
+    } catch (err: any) {
+      setSignupError(err.response?.data?.error || 'Unable to resend code. Please try again.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Step 3: Set Password & Finalize Account Creation
+  const handleFinalizeSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError(null);
+    if (signupPassword.length < 5) {
+      setSignupError('Password must be at least 5 characters long.');
+      return;
+    }
+    if (signupPassword !== signupConfirmPassword) {
+      setSignupError('Passwords do not match. Please verify.');
+      return;
+    }
     setIsSignupLoading(true);
     try {
-      await signUp(signupName, signupEmail, signupPassword, signupRole, signupOrg || 'S.B. Jain Campus');
+      await signUp(
+        signupName.trim(),
+        signupEmail.trim().toLowerCase(),
+        signupPassword,
+        signupOtp.trim(),
+        signupOrg.trim() || 'S.B. Jain Campus'
+      );
       setIsAuthModalOpen(false);
       navigate('/');
     } catch (err: any) {
@@ -242,15 +375,67 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  // Forgot Password: Send OTP
+  const handleSendForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail) return;
-    setForgotSuccess(true);
-    setTimeout(() => {
-      setForgotSuccess(false);
+    setForgotError(null);
+    if (!forgotEmail.trim() || !forgotEmail.includes('@')) {
+      setForgotError('Please enter your registered email address.');
+      return;
+    }
+    setIsForgotLoading(true);
+    try {
+      const res = await api.sendOtp(forgotEmail.trim().toLowerCase(), 'forgot-password');
+      if (res.otp) {
+        setForgotSimulatedOtp(res.otp);
+      }
+      setForgotStep(2);
+    } catch (err: any) {
+      setForgotError(err.response?.data?.error || 'No account found with this email.');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  // Forgot Password: Reset Password with OTP
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    if (forgotOtp.trim().length !== 6) {
+      setForgotError('Please enter the 6-digit verification code.');
+      return;
+    }
+    if (forgotNewPassword.length < 5) {
+      setForgotError('New password must be at least 5 characters long.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+    setIsForgotLoading(true);
+    try {
+      await api.resetPassword({
+        email: forgotEmail.trim().toLowerCase(),
+        otp: forgotOtp.trim(),
+        newPassword: forgotNewPassword,
+      });
       setIsForgotModalOpen(false);
-      setForgotEmail('');
-    }, 2500);
+      setEmail(forgotEmail.trim().toLowerCase());
+      setPassword('');
+      setLoginSuccessMessage('Password reset successfully! Please sign in with your new password.');
+      setAuthTab('login');
+      setIsAuthModalOpen(true);
+      setForgotStep(1);
+      setForgotOtp('');
+      setForgotNewPassword('');
+      setForgotConfirmPassword('');
+      setForgotSimulatedOtp(null);
+    } catch (err: any) {
+      setForgotError(err.response?.data?.error || 'Failed to reset password. Please check your code.');
+    } finally {
+      setIsForgotLoading(false);
+    }
   };
 
   const copyToClipboard = (text: string, index: number) => {
@@ -769,31 +954,7 @@ export const LoginPage: React.FC = () => {
             </ScrollReveal>
           </div>
 
-          {/* Quick Help Desk CTA Banner with Glow */}
-          <ScrollReveal direction="up" delay={150}>
-            <div className="mt-12 p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-sky-900/20 via-blue-900/20 to-cyan-900/20 border border-sky-500/30 flex flex-col sm:flex-row items-center justify-between gap-6 backdrop-blur-sm shadow-[0_0_30px_rgba(56,189,248,0.1)] card-glow-hover">
-              <div className="flex items-center gap-4 text-left">
-                <div className="w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-sky-600/40 animate-pulse-glow">
-                  <LifeBuoy size={24} />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    Need on-campus engineering support or sensor calibration assistance?
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                    Our development and research team is available to assist your deployment directly.
-                  </p>
-                </div>
-              </div>
-              <a
-                href="#contacts"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#4FC3F7] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#0277BD] text-slate-950 text-xs font-black shrink-0 shadow-md shadow-[#4FC3F7]/30 hover:shadow-lg hover:shadow-[#4FC3F7]/40 transition-all flex items-center gap-2 interactive-btn shimmer-sweep"
-              >
-                <span>Contact Engineering Team</span>
-                <ArrowRight size={14} className="stroke-[2.5]" />
-              </a>
-            </div>
-          </ScrollReveal>
+          
         </div>
       </section>
 
@@ -1137,6 +1298,13 @@ export const LoginPage: React.FC = () => {
                 {/* TAB 1: LOGIN FORM */}
                 {authTab === 'login' && (
                   <>
+                    {loginSuccessMessage && (
+                      <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs mb-4 flex items-center gap-2 animate-fade-in-up">
+                        <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
+                        <span>{loginSuccessMessage}</span>
+                      </div>
+                    )}
+
                     {loginError && (
                       <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
                         <AlertTriangle size={15} className="shrink-0 text-rose-500" />
@@ -1159,7 +1327,7 @@ export const LoginPage: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
-                            placeholder="admin@aquapure.edu"
+                            placeholder="Enter your email (e.g. name@gmail.com)"
                           />
                         </div>
                       </div>
@@ -1171,7 +1339,12 @@ export const LoginPage: React.FC = () => {
                           </label>
                           <button
                             type="button"
-                            onClick={() => setIsForgotModalOpen(true)}
+                            onClick={() => {
+                              setIsForgotModalOpen(true);
+                              setForgotStep(1);
+                              setForgotError(null);
+                              setForgotSimulatedOtp(null);
+                            }}
                             className="text-[11px] font-semibold text-[#0288D1] dark:text-[#4FC3F7] hover:underline cursor-pointer"
                           >
                             Forgot Password?
@@ -1223,149 +1396,316 @@ export const LoginPage: React.FC = () => {
                         <ArrowRight size={16} className="stroke-[2.5]" />
                       </button>
                     </form>
-
                   </>
                 )}
 
-                {/* TAB 2: SIGN UP / REGISTRATION FORM (With Dynamic Real-Time Blue Effects) */}
+                {/* TAB 2: SIGN UP / REGISTRATION FORM (With 3-Step OTP Verification Flow) */}
                 {authTab === 'signup' && (
-                  <>
+                  <div className="space-y-4">
+                    {/* Step Progress Bar */}
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${signupStep >= 1 ? 'bg-[#00E5FF] text-slate-950 font-black' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                          1
+                        </div>
+                        <span className={`text-[11px] font-bold ${signupStep === 1 ? 'text-[#00E5FF]' : 'text-slate-400'}`}>
+                          Details
+                        </span>
+                      </div>
+                      <div className={`h-0.5 flex-1 mx-2 rounded-full ${signupStep >= 2 ? 'bg-[#00E5FF]' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${signupStep >= 2 ? 'bg-[#00E5FF] text-slate-950 font-black' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                          2
+                        </div>
+                        <span className={`text-[11px] font-bold ${signupStep === 2 ? 'text-[#00E5FF]' : 'text-slate-400'}`}>
+                          OTP
+                        </span>
+                      </div>
+                      <div className={`h-0.5 flex-1 mx-2 rounded-full ${signupStep >= 3 ? 'bg-[#00E5FF]' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${signupStep >= 3 ? 'bg-[#00E5FF] text-slate-950 font-black' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                          3
+                        </div>
+                        <span className={`text-[11px] font-bold ${signupStep === 3 ? 'text-[#00E5FF]' : 'text-slate-400'}`}>
+                          Password
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* In-Modal OTP Simulation Helper Toast */}
+                    {signupSimulatedOtp && (
+                      <div className="p-3 rounded-xl bg-cyan-950/60 border border-[#00E5FF]/40 text-[#00E5FF] text-xs flex items-center justify-between animate-fade-in-down shadow-[0_0_15px_rgba(0,229,255,0.2)]">
+                        <div className="flex items-center gap-2">
+                          <KeyRound size={15} className="shrink-0 animate-pulse text-[#00E5FF]" />
+                          <div>
+                            <span className="font-bold">Verification Code: </span>
+                            <span className="font-mono font-black text-sm tracking-wider text-white bg-[#0288D1]/80 px-1.5 py-0.5 rounded">
+                              {signupSimulatedOtp}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSignupOtp(signupSimulatedOtp);
+                            setSignupError(null);
+                          }}
+                          className="text-[10px] font-black uppercase px-2 py-1 rounded bg-[#00E5FF] text-slate-950 hover:bg-white transition-colors cursor-pointer"
+                        >
+                          Autofill
+                        </button>
+                      </div>
+                    )}
+
                     {signupError && (
-                      <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-4 flex items-center gap-2 animate-shake">
+                      <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2 animate-shake">
                         <AlertTriangle size={15} className="shrink-0 text-rose-500" />
                         <span>{signupError}</span>
                       </div>
                     )}
 
-                    <form onSubmit={handleSignupSubmit} className="space-y-3.5">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Full Name
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
-                            <UserIcon size={16} />
-                          </div>
-                          <input
-                            type="text"
-                            required
-                            value={signupName}
-                            onChange={(e) => setSignupName(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
-                            placeholder="Dr. Rajesh Gupta"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
-                            <Mail size={16} />
-                          </div>
-                          <input
-                            type="email"
-                            required
-                            value={signupEmail}
-                            onChange={(e) => setSignupEmail(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
-                            placeholder="rajesh.gupta@sbjit.edu.in"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* STEP 1: Enter Name & Email to send OTP */}
+                    {signupStep === 1 && (
+                      <form onSubmit={handleSendSignupOtp} className="space-y-3.5">
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Campus / Organization
+                            Full Name
                           </label>
                           <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
-                              <Building2 size={14} />
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <UserIcon size={16} />
                             </div>
                             <input
                               type="text"
-                              value={signupOrg}
-                              onChange={(e) => setSignupOrg(e.target.value)}
-                              className="w-full pl-8 pr-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all"
-                              placeholder="S.B. Jain Campus"
+                              required
+                              value={signupName}
+                              onChange={(e) => setSignupName(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                              placeholder="e.g. Utkarsh Punkar"
                             />
                           </div>
                         </div>
 
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Requested Role
+                            Email Address (Real Gmail / Institutional)
                           </label>
-                          <select
-                            value={signupRole}
-                            onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                            className="w-full px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all font-medium"
-                          >
-                            <option value="VIEWER">Viewer</option>
-                            <option value="MAINTENANCE_STAFF">Maintenance Staff</option>
-                            <option value="TECHNICAL_HEAD">Technical Head</option>
-                            <option value="ADMIN">Administrator</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Password
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
-                            <Lock size={16} />
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <Mail size={16} />
+                            </div>
+                            <input
+                              type="email"
+                              required
+                              value={signupEmail}
+                              onChange={(e) => setSignupEmail(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
+                              placeholder="e.g. utkarshpunkar7@gmail.com"
+                            />
                           </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                            We will send a 6-digit OTP verification code to this email.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Campus / Organization
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <Building2 size={15} />
+                            </div>
+                            <input
+                              type="text"
+                              value={signupOrg}
+                              onChange={(e) => setSignupOrg(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all"
+                              placeholder="S.B. Jain Campus"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isSendingOtp}
+                          className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
+                        >
+                          <Send size={15} />
+                          <span>{isSendingOtp ? 'Sending Verification Code...' : 'Send 6-Digit Verification Code'}</span>
+                        </button>
+                      </form>
+                    )}
+
+                    {/* STEP 2: Enter & Verify 6-Digit OTP */}
+                    {signupStep === 2 && (
+                      <form onSubmit={handleVerifySignupOtp} className="space-y-4 animate-fade-in-up">
+                        <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-center">
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
+                            Enter the 6-digit code sent to:
+                          </p>
+                          <p className="text-xs font-bold text-[#0288D1] dark:text-[#4FC3F7] mt-0.5 font-mono">
+                            {signupEmail}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 text-center">
+                            6-Digit Verification Code
+                          </label>
                           <input
-                            type={showPassword ? 'text' : 'password'}
+                            type="text"
+                            maxLength={6}
                             required
-                            value={signupPassword}
-                            onChange={(e) => setSignupPassword(e.target.value)}
-                            className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] focus:shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all"
-                            placeholder="••••••••"
+                            autoFocus
+                            value={signupOtp}
+                            onChange={(e) => setSignupOtp(e.target.value.replace(/\D/g, ''))}
+                            className="w-full py-3 text-center text-xl font-mono font-black tracking-[0.4em] rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/50 focus:border-[#00E5FF] focus:shadow-[0_0_20px_rgba(0,229,255,0.3)] transition-all"
+                            placeholder="••••••"
                           />
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
                           <button
                             type="button"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#00E5FF] interactive-btn transition-colors"
+                            onClick={() => setSignupStep(1)}
+                            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
                           >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <ArrowLeft size={13} />
+                            <span>Change Email</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={resendTimer > 0 || isSendingOtp}
+                            onClick={handleResendSignupOtp}
+                            className={`flex items-center gap-1 font-bold ${
+                              resendTimer > 0
+                                ? 'text-slate-400 cursor-not-allowed'
+                                : 'text-[#0288D1] dark:text-[#4FC3F7] hover:underline cursor-pointer'
+                            }`}
+                          >
+                            <RefreshCw size={13} className={isSendingOtp ? 'animate-spin' : ''} />
+                            <span>{resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code'}</span>
                           </button>
                         </div>
 
-                        {/* Dynamic Real-Time Password Strength Meter */}
-                        {signupPassword && (
-                          <div className="mt-2 p-2.5 rounded-xl bg-sky-50/60 dark:bg-slate-900/90 border border-[#00E5FF]/30 animate-fade-in">
-                            <div className="flex items-center justify-between text-[10px] mb-1.5">
-                              <span className="text-slate-500 dark:text-slate-400 font-medium">Security Matrix:</span>
-                              <span className={`font-bold ${getPasswordStrength(signupPassword).text}`}>
-                                {getPasswordStrength(signupPassword).label}
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-300 ${getPasswordStrength(signupPassword).color} shadow-[0_0_8px_#00E5FF]`}
-                                style={{ width: getPasswordStrength(signupPassword).width }}
-                              />
+                        <button
+                          type="submit"
+                          disabled={isVerifyingOtp || signupOtp.length !== 6}
+                          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
+                        >
+                          <ShieldCheck size={16} />
+                          <span>{isVerifyingOtp ? 'Verifying Code...' : 'Verify Code & Proceed'}</span>
+                        </button>
+                      </form>
+                    )}
+
+                    {/* STEP 3: Set Password & Finalize Account Creation */}
+                    {signupStep === 3 && (
+                      <form onSubmit={handleFinalizeSignup} className="space-y-3.5 animate-fade-in-up">
+                        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                            <div>
+                              <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                Email Verified ✓
+                              </p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                {signupEmail}
+                              </p>
                             </div>
                           </div>
-                        )}
-                      </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                            Role: Viewer (User)
+                          </span>
+                        </div>
 
-                      <button
-                        type="submit"
-                        disabled={isSignupLoading}
-                        className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
-                      >
-                        <span>{isSignupLoading ? 'Registering Account...' : 'Create Account & Enter'}</span>
-                        <ArrowRight size={16} className="stroke-[2.5]" />
-                      </button>
-                    </form>
-                  </>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Create Password
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <Lock size={16} />
+                            </div>
+                            <input
+                              type={showSignupPassword ? 'text' : 'password'}
+                              required
+                              value={signupPassword}
+                              onChange={(e) => setSignupPassword(e.target.value)}
+                              className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all"
+                              placeholder="Minimum 5 characters"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowSignupPassword((prev) => !prev)}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#00E5FF] interactive-btn transition-colors"
+                            >
+                              {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+
+                          {/* Dynamic Real-Time Password Strength Meter */}
+                          {signupPassword && (
+                            <div className="mt-2 p-2.5 rounded-xl bg-sky-50/60 dark:bg-slate-900/90 border border-[#00E5FF]/30 animate-fade-in">
+                              <div className="flex items-center justify-between text-[10px] mb-1.5">
+                                <span className="text-slate-500 dark:text-slate-400 font-medium">Security Matrix:</span>
+                                <span className={`font-bold ${getPasswordStrength(signupPassword).text}`}>
+                                  {getPasswordStrength(signupPassword).label}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${getPasswordStrength(signupPassword).color} shadow-[0_0_8px_#00E5FF]`}
+                                  style={{ width: getPasswordStrength(signupPassword).width }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Confirm Password
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#0288D1] dark:text-[#4FC3F7]">
+                              <Lock size={16} />
+                            </div>
+                            <input
+                              type={showSignupConfirmPassword ? 'text' : 'password'}
+                              required
+                              value={signupConfirmPassword}
+                              onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                              className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 focus:border-[#00E5FF] transition-all"
+                              placeholder="Re-enter password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowSignupConfirmPassword((prev) => !prev)}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#00E5FF] interactive-btn transition-colors"
+                            >
+                              {showSignupConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Your account will be created with default <strong>Viewer</strong> access. Technical Head can upgrade your permissions upon review.
+                        </p>
+
+                        <button
+                          type="submit"
+                          disabled={isSignupLoading}
+                          className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#29B6F6] to-[#0288D1] hover:from-[#29B6F6] hover:to-[#01579B] text-slate-950 text-xs font-black shadow-[0_0_25px_rgba(0,229,255,0.4)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 interactive-btn shimmer-sweep"
+                        >
+                          <span>{isSignupLoading ? 'Saving Account Credentials...' : 'Create Account & Enter'}</span>
+                          <ArrowRight size={16} className="stroke-[2.5]" />
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 )}
 
                 {/* Secure Session Footer in Blue */}
@@ -1381,7 +1721,7 @@ export const LoginPage: React.FC = () => {
       )}
 
       {/* =========================================================================
-          FORGOT PASSWORD MODAL (Electric Blue Theme)
+          FORGOT PASSWORD MODAL (2-Step OTP Verification Reset)
          ========================================================================= */}
       {isForgotModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in duration-150">
@@ -1390,7 +1730,8 @@ export const LoginPage: React.FC = () => {
             <button
               onClick={() => {
                 setIsForgotModalOpen(false);
-                setForgotSuccess(false);
+                setForgotError(null);
+                setForgotSimulatedOtp(null);
               }}
               className="absolute top-4 right-4 text-slate-400 hover:text-[#00E5FF] dark:hover:text-[#00E5FF] p-1.5 rounded-lg cursor-pointer interactive-btn transition-colors"
             >
@@ -1399,42 +1740,144 @@ export const LoginPage: React.FC = () => {
 
             <div className="flex items-center gap-2.5 mb-1.5">
               <div className="w-7 h-7 rounded-lg bg-[#00E5FF]/15 border border-[#00E5FF]/40 flex items-center justify-center text-[#00E5FF]">
-                <ShieldCheck size={16} />
+                <KeyRound size={16} />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Reset Password
+                Reset Password with OTP
               </h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-sky-200/70 mb-4">
-              Enter your registered campus email to receive verification reset instructions.
+              Verify your registered email with a 6-digit OTP code to create a new password.
             </p>
 
-            {forgotSuccess ? (
-              <div className="p-4 rounded-xl bg-cyan-950/40 border border-[#00E5FF]/40 text-[#00E5FF] text-xs flex items-center gap-2.5 animate-fade-in-up">
-                <CheckCircle size={18} className="shrink-0 text-[#00E5FF]" />
-                <span className="font-medium">Password reset link sent to your email! (Simulated)</span>
+            {/* In-Modal OTP Simulation Helper Toast */}
+            {forgotSimulatedOtp && (
+              <div className="p-3 rounded-xl bg-cyan-950/60 border border-[#00E5FF]/40 text-[#00E5FF] text-xs flex items-center justify-between mb-3 animate-fade-in-down">
+                <div className="flex items-center gap-2">
+                  <KeyRound size={15} className="shrink-0 text-[#00E5FF]" />
+                  <div>
+                    <span className="font-bold">Reset OTP: </span>
+                    <span className="font-mono font-black text-sm tracking-wider text-white bg-[#0288D1]/80 px-1.5 py-0.5 rounded">
+                      {forgotSimulatedOtp}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotOtp(forgotSimulatedOtp);
+                    setForgotError(null);
+                  }}
+                  className="text-[10px] font-black uppercase px-2 py-1 rounded bg-[#00E5FF] text-slate-950 hover:bg-white transition-colors cursor-pointer"
+                >
+                  Autofill
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleForgotSubmit} className="space-y-3">
+            )}
+
+            {forgotError && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs mb-3 flex items-center gap-2 animate-shake">
+                <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {forgotStep === 1 ? (
+              <form onSubmit={handleSendForgotOtp} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-sky-200 mb-1">
-                    Email Address
+                    Registered Email Address
                   </label>
                   <input
                     type="email"
                     required
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="user@aquapure.edu"
+                    placeholder="e.g. yourname@gmail.com"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0b1933] border border-slate-200 dark:border-[#0288D1]/40 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-sky-400/40"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#0288D1] to-[#01579B] hover:from-[#38BDF8] hover:to-[#0288D1] text-white text-xs font-bold shadow-lg shadow-[#00E5FF]/25 hover:shadow-[#00E5FF]/40 transition-all cursor-pointer interactive-btn shimmer-sweep"
+                  disabled={isForgotLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#0288D1] to-[#01579B] hover:from-[#38BDF8] hover:to-[#0288D1] text-slate-950 text-xs font-bold shadow-lg shadow-[#00E5FF]/25 hover:shadow-[#00E5FF]/40 transition-all cursor-pointer interactive-btn shimmer-sweep flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  Send Reset Link
+                  <Send size={14} />
+                  <span>{isForgotLoading ? 'Sending OTP Code...' : 'Send Reset Code'}</span>
                 </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3 animate-fade-in-up">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-sky-200 mb-1">
+                    6-Digit Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    autoFocus
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
+                    className="w-full px-3.5 py-2.5 text-center font-mono font-bold tracking-widest rounded-xl bg-slate-50 dark:bg-[#0b1933] border border-slate-200 dark:border-[#0288D1]/40 text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-sky-200 mb-1">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showForgotNewPassword ? 'text' : 'password'}
+                      required
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      placeholder="Minimum 5 characters"
+                      className="w-full px-3.5 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0b1933] border border-slate-200 dark:border-[#0288D1]/40 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotNewPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#00E5FF]"
+                    >
+                      {showForgotNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-sky-200 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type={showForgotNewPassword ? 'text' : 'password'}
+                    required
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    placeholder="Re-enter new password"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0b1933] border border-slate-200 dark:border-[#0288D1]/40 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    className="w-1/3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isForgotLoading}
+                    className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-[#00E5FF] via-[#0288D1] to-[#01579B] hover:from-[#38BDF8] hover:to-[#0288D1] text-slate-950 text-xs font-bold shadow-lg shadow-[#00E5FF]/25 hover:shadow-[#00E5FF]/40 transition-all cursor-pointer interactive-btn shimmer-sweep flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>{isForgotLoading ? 'Updating...' : 'Set Password'}</span>
+                  </button>
+                </div>
               </form>
             )}
           </div>

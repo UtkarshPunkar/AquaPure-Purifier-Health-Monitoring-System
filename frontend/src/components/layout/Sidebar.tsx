@@ -3,19 +3,19 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Droplets,
-  Activity,
   ScanEye,
   Filter,
   Wrench,
   BellRing,
   BarChart3,
-  FileText,
   Users,
   Settings,
   X,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 import { useTelemetry } from '../../context/TelemetryContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,22 +31,25 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { user, logout } = useAuth();
   const { alerts } = useTelemetry();
   const unreadAlerts = alerts.filter((a) => !a.isAcknowledged).length;
 
-  const navItems: NavItemConfig[] = [
+  const isTechHead = user?.role === 'TECHNICAL_HEAD' || user?.email?.toLowerCase() === 'utkarshpunkar7@gmail.com';
+
+  const baseNavItems: NavItemConfig[] = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { to: '/purifiers', label: 'Purifiers', icon: Droplets },
-    { to: '/water-quality', label: 'Water Quality', icon: Activity },
     { to: '/ai-detection', label: 'AI Detection', icon: ScanEye },
     { to: '/filter-health', label: 'Filter Health', icon: Filter },
     { to: '/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/alerts', label: 'Alerts', icon: BellRing, count: unreadAlerts },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/reports', label: 'Reports', icon: FileText },
-    { to: '/users', label: 'Users', icon: Users },
+    ...(isTechHead ? [{ to: '/users', label: 'Users & Access', icon: Users }] : []),
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
+
+  const navItems = baseNavItems;
 
   const sidebarContent = (
     <div className="flex flex-col h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 select-none transition-colors">
@@ -114,14 +117,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         })}
       </div>
 
+      {/* Sign Out Action Button */}
+      <div className="px-3 pt-2 pb-1">
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            logout();
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60 text-xs font-bold transition-all shadow-2xs cursor-pointer interactive-btn group"
+          title="Sign out of AquaPure account"
+        >
+          <LogOut size={16} className="transition-transform group-hover:-translate-x-0.5 stroke-[2.2]" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+
       {/* Bottom Institution / Organization Card */}
-      <div className="p-3 m-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs interactive-card">
+      <div className="p-3 m-3 mt-1 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs interactive-card">
         <div className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 font-bold mb-1 text-[11px]">
           <ShieldCheck size={14} />
           <span>S.B. Jain Campus</span>
         </div>
         <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-          5 Nodes Online &bull; WHO-WQI Certified
+          5 Nodes Online &bull; Telemetry Active
         </p>
       </div>
     </div>

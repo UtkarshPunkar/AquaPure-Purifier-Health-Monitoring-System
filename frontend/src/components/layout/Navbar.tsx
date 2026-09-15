@@ -5,7 +5,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell,
-  Mail,
   Menu,
   LogOut,
   Sun,
@@ -18,7 +17,9 @@ import {
   Settings,
   X,
   ExternalLink,
+  KeyRound,
 } from 'lucide-react';
+import { ManageAccountModal } from '../common/ManageAccountModal';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -33,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
 
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -114,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
           </div>
         </div>
 
-        {/* Right Section: Messages + Alerts Bell + User Name + Super Admin + Avatar */}
+        {/* Right Section: Live Toggle + Theme Mode + Alerts Bell + User Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Live Simulation Indicator & Toggle */}
           <button
@@ -137,24 +139,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
           {/* Light / Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 transition-all interactive-btn"
+            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60 transition-all interactive-btn group"
             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
             aria-label="Toggle theme"
           >
             {theme === 'light' ? (
-              <Moon size={17} className="text-slate-700" />
+              <Moon size={17} className="text-slate-700 dark:text-slate-200 group-hover:scale-110 transition-transform" />
             ) : (
-              <Sun size={17} className="text-amber-400" />
+              <Sun size={17} className="text-amber-400 group-hover:scale-110 transition-transform" />
             )}
-          </button>
-
-          {/* Messages Quick Button (Matching Reference Image) */}
-          <button
-            onClick={() => navigate('/alerts')}
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60 transition-all interactive-btn hidden md:flex items-center justify-center cursor-pointer"
-            title="Messages & Activity"
-          >
-            <Mail size={16} />
           </button>
 
           {/* Notifications Bell Dropdown */}
@@ -246,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
             )}
           </div>
 
-          {/* User Profile Pill & Dropdown (Matching Reference Image Header) */}
+          {/* User Profile Pill & Dropdown (Matching Reference Image Exactly) */}
           <div className="relative pl-1" ref={profileRef}>
             <button
               onClick={() => setIsProfileOpen((prev) => !prev)}
@@ -255,60 +248,86 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
             >
               <div className="hidden sm:block text-right">
                 <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
-                  {user?.name || 'Campus Administrator'}
+                  {user?.name || 'Mithilesh Kose'}
                 </div>
                 <div className="text-[10px] text-slate-400 dark:text-slate-400 font-medium leading-tight">
                   {user?.role === 'ADMIN' ? 'Super Admin' : user?.role?.replace('_', ' ') || 'Super Admin'}
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-full ring-2 ring-slate-200 dark:ring-slate-700 overflow-hidden bg-slate-200 dark:bg-slate-800 shrink-0 shadow-2xs">
-                <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
-                  alt="User Profile"
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-9 h-9 rounded-full bg-[#00C0F0] text-slate-950 ring-4 ring-[#00C0F0]/25 dark:ring-[#00C0F0]/30 flex items-center justify-center shrink-0 shadow-xs">
+                <User size={18} className="stroke-[2.2]" />
               </div>
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-scale-up origin-top-right">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {user?.name || 'Administrator'}
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {user?.email || 'admin@aquapure.edu'}
-                  </p>
-                  <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
-                    Role: {user?.role?.replace('_', ' ') || 'Administrator'}
-                  </span>
+              <div className="absolute right-0 mt-2 w-72 rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden animate-scale-up origin-top-right p-4">
+                {/* Top Profile Header Block */}
+                <div className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-[#00C0F0] text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
+                      <User size={22} className="stroke-[2.2]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                        {user?.name || 'Utkarsh Punkar'}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                        {user?.email || 'utkarshpunkar7@gmail.com'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Role Pill Badge */}
+                  <div className="mt-2.5">
+                    <span className="inline-block text-[11px] font-semibold px-3 py-0.5 rounded-full bg-sky-100/90 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800">
+                      Role: {user?.role === 'TECHNICAL_HEAD' ? 'Technical Head' : user?.role?.replace(/_/g, ' ') || 'Technical Head'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="p-1 text-xs">
+                {/* Menu List */}
+                <div className="pt-2 text-xs space-y-0.5 border-t border-slate-100 dark:border-slate-800/80">
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsAccountModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 font-bold transition-colors text-left cursor-pointer"
+                  >
+                    <KeyRound size={17} className="stroke-[2.2]" />
+                    <span>Manage Account &amp; Credentials</span>
+                  </button>
+
                   <Link
                     to="/settings"
                     onClick={() => setIsProfileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 font-medium transition-colors"
                   >
-                    <Settings size={15} />
-                    <span>Settings & Thresholds</span>
+                    <Settings size={17} />
+                    <span>Settings &amp; Thresholds</span>
                   </Link>
-                  <Link
-                    to="/users"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <User size={15} />
-                    <span>User Management</span>
-                  </Link>
+
+                  {(user?.role === 'TECHNICAL_HEAD' || user?.email?.toLowerCase() === 'utkarshpunkar7@gmail.com') && (
+                    <Link
+                      to="/users"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 font-medium transition-colors"
+                    >
+                      <User size={17} />
+                      <span>User &amp; Role Management</span>
+                    </Link>
+                  )}
+
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition-colors text-left cursor-pointer"
                   >
-                    <LogOut size={15} />
+                    <LogOut size={17} className="stroke-[2.2]" />
                     <span>Sign Out</span>
                   </button>
                 </div>
@@ -328,7 +347,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by purifier name, code (WP-001), building or location..."
+                placeholder="Search by purifier name, code (WP-1), building or location..."
                 className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                 autoFocus
               />
@@ -392,6 +411,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
           </div>
         </div>
       )}
+
+      {/* Manage Account & Credentials Modal */}
+      <ManageAccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
     </header>
   );
 };

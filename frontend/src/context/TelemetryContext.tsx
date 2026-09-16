@@ -20,29 +20,29 @@ interface TelemetryContextType {
 
 const TelemetryContext = createContext<TelemetryContextType>({} as TelemetryContextType);
 
-// Realistic 12 sample purifiers for immediate fallback
+// 5 Standard Purifiers across S.B. Jain Campus
 const samplePurifiers: Purifier[] = [
   {
     id: 'wp-001',
-    purifierCode: 'WP-001',
-    name: 'Main Administrative Center Purifier',
-    location: 'Main Administrative Block - Ground Floor Foyer',
-    building: 'Main Administrative Block',
-    floor: 'Ground Floor, Lobby West',
-    status: 'HEALTHY',
+    purifierCode: 'WP-1',
+    name: 'EMTech Dept Purifier (2nd Floor)',
+    location: 'EMTech Dept 2nd floor',
+    building: 'EMTech Dept',
+    floor: '2nd Floor',
+    status: 'INACTIVE',
     isPhysicalHardware: true,
     modelType: 'Commercial Multi-Stage RO + UV + Active Carbon',
     deviceId: 'PICO-W-001',
     installationDate: '2026-03-01',
     currentTelemetry: {
-      ph: 7.25,
-      tds: 145,
-      turbidity: 0.42,
-      temperature: 23.4,
-      flowRate: 2.5,
+      ph: 0,
+      tds: 0,
+      turbidity: 0,
+      temperature: 0,
+      flowRate: 0,
       waterLevel: 84,
-      wqiScore: 94,
-      wqiStatus: 'EXCELLENT',
+      wqiScore: 0,
+      wqiStatus: 'STANDBY',
       lastSeen: new Date().toISOString(),
     },
     filter: {
@@ -57,11 +57,11 @@ const samplePurifiers: Purifier[] = [
   },
   {
     id: 'wp-002',
-    purifierCode: 'WP-002',
-    name: 'Central Library Water Station',
-    location: 'Central Library - 2nd Floor Reading Room',
-    building: 'Knowledge Center',
-    floor: 'Floor 2, Hall B',
+    purifierCode: 'WP-2',
+    name: 'EMTech Dept Purifier (3rd Floor)',
+    location: 'EMTech Dept 3rd floor',
+    building: 'EMTech Dept',
+    floor: '3rd Floor',
     status: 'HEALTHY',
     isPhysicalHardware: false,
     modelType: 'Industrial Heavy-Duty RO + UF',
@@ -90,11 +90,11 @@ const samplePurifiers: Purifier[] = [
   },
   {
     id: 'wp-003',
-    purifierCode: 'WP-003',
-    name: 'Computer Science Dept Purifier',
-    location: 'Department of Computer Science - Block C',
-    building: 'Computer Science Block',
-    floor: '3rd Floor, Server Corridor',
+    purifierCode: 'WP-3',
+    name: 'ETC Dept Purifier (Ground Floor)',
+    location: 'ETC Dept Ground floor',
+    building: 'ETC Dept',
+    floor: 'Ground Floor',
     status: 'WARNING',
     isPhysicalHardware: false,
     modelType: 'Commercial RO + UV + TDS Stabilizer',
@@ -123,11 +123,11 @@ const samplePurifiers: Purifier[] = [
   },
   {
     id: 'wp-004',
-    purifierCode: 'WP-004',
-    name: 'Faculty & Executive Lounge Purifier',
-    location: 'Administrative Wing - Faculty Common Hall',
-    building: 'Admin Annex',
-    floor: '1st Floor, Suite 108',
+    purifierCode: 'WP-4',
+    name: 'CSE Dept Purifier (1st Floor)',
+    location: 'CSE Dept 1st floor',
+    building: 'CSE Dept',
+    floor: '1st Floor',
     status: 'HEALTHY',
     isPhysicalHardware: false,
     modelType: 'Commercial RO + Carbon Filter',
@@ -156,11 +156,11 @@ const samplePurifiers: Purifier[] = [
   },
   {
     id: 'wp-005',
-    purifierCode: 'WP-005',
-    name: 'Campus Main Cafeteria Dispenser',
-    location: 'Food Court & Dining Complex - Main Counter',
-    building: 'Cafeteria Block',
-    floor: 'Ground Floor, Dispenser 1',
+    purifierCode: 'WP-5',
+    name: 'MBA Dept Purifier (2nd Floor)',
+    location: 'MBA Dept 2nd floor',
+    building: 'MBA Dept',
+    floor: '2nd Floor',
     status: 'CRITICAL',
     isPhysicalHardware: false,
     modelType: 'High-Capacity Multi-Stage Industrial Purifier',
@@ -247,7 +247,7 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             severity: 'CRITICAL',
             type: 'REACTIVE',
             category: 'WATER_QUALITY',
-            title: 'Critical TDS Level in Cafeteria Dispenser (WP-005)',
+            title: 'Critical TDS Level in MBA Dept Purifier (WP-5)',
             message: 'TDS measured at 465 ppm exceeding maximum allowable drinking water threshold (300 ppm).',
             recommendation: 'Temporarily lock dispenser valve and perform immediate RO membrane replacement.',
             timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
@@ -260,7 +260,7 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             severity: 'PREDICTIVE',
             type: 'PREDICTIVE',
             category: 'FILTER_HEALTH',
-            title: 'Filter health degraded in WP-003',
+            title: 'Filter health degraded in WP-3',
             message: 'Predictive degradation model indicates filter health at 64%. Remaining life estimated under 24 days.',
             recommendation: 'Plan replacement of composite carbon filter.',
             timestamp: new Date(Date.now() - 8 * 3600 * 1000).toISOString(),
@@ -273,7 +273,7 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             severity: 'CRITICAL',
             type: 'REACTIVE',
             category: 'CONTAMINANT',
-            title: 'Possible Algae Detected in WP-004',
+            title: 'Possible Algae Detected in WP-4',
             message: 'AI optical camera classified micro-algae cluster in reservoir with 94.2% confidence.',
             recommendation: 'Initiate chemical sanitization and flush reservoir chamber immediately.',
             timestamp: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
@@ -287,45 +287,73 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, []);
 
-  // Real-time live jitter / simulation effect when Live mode is on
+  // Real-time live socket listener for Hardware Node & Simulation engine
   useEffect(() => {
     refreshData();
 
-    const interval = setInterval(() => {
-      if (!isLiveMode) return;
+    const socket = getSocket();
+
+    const handleTelemetryUpdate = (payload: any) => {
+      if (!payload) return;
+
       setPurifiers((prev) =>
         prev.map((p) => {
-          if (p.status === 'OFFLINE') return p;
-          const jitterTds = Math.round((p.currentTelemetry.tds + (Math.random() * 2 - 1)) * 10) / 10;
-          const jitterPh = Math.round((p.currentTelemetry.ph + (Math.random() * 0.04 - 0.02)) * 100) / 100;
-          const jitterTurb = Math.max(
-            0.1,
-            Math.round((p.currentTelemetry.turbidity + (Math.random() * 0.04 - 0.02)) * 100) / 100
-          );
-          const jitterFlow = Math.max(
-            0,
-            Math.round((p.currentTelemetry.flowRate + (Math.random() * 0.06 - 0.03)) * 100) / 100
-          );
-          const jitterLevel = Math.min(100, Math.max(20, (p.currentTelemetry.waterLevel || 80) + (Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0)));
-
-          return {
-            ...p,
-            currentTelemetry: {
-              ...p.currentTelemetry,
-              tds: jitterTds,
-              ph: jitterPh,
-              turbidity: jitterTurb,
-              flowRate: jitterFlow,
-              waterLevel: jitterLevel,
-              lastSeen: new Date().toISOString(),
-            },
-          };
+          if (p.id === payload.purifierId || p.purifierCode === payload.purifierCode) {
+            return {
+              ...p,
+              status: payload.purifierStatus || p.status,
+              currentTelemetry: {
+                ph: payload.ph,
+                tds: payload.tds,
+                turbidity: payload.turbidity,
+                temperature: payload.temperature,
+                flowRate: payload.flowRate,
+                waterLevel: payload.waterLevel || p.currentTelemetry.waterLevel || 82,
+                wqiScore: payload.wqiScore,
+                wqiStatus: payload.wqiStatus,
+                filterHealth: payload.filterHealth !== undefined ? payload.filterHealth : p.filter?.healthScore,
+                lastSeen: payload.timestamp || new Date().toISOString(),
+              },
+              device: payload.device ? { ...p.device, ...payload.device } : p.device,
+              filter: p.filter && payload.filterHealth !== undefined
+                ? { ...p.filter, healthScore: payload.filterHealth }
+                : p.filter,
+            };
+          }
+          return p;
         })
       );
-    }, 3500);
+    };
 
-    return () => clearInterval(interval);
-  }, [isLiveMode, refreshData]);
+    const handleNewAlert = (newAlert: AlertItem) => {
+      setAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
+    };
+
+    const handleOffline = (offlineData: any) => {
+      setPurifiers((prev) =>
+        prev.map((p) => {
+          if (p.id === offlineData.purifierId || p.purifierCode === offlineData.purifierCode) {
+            return {
+              ...p,
+              status: offlineData.status || 'INACTIVE',
+              device: p.device ? { ...p.device, status: offlineData.status || 'INACTIVE' } : p.device,
+            };
+          }
+          return p;
+        })
+      );
+    };
+
+    socket.on('telemetry:update', handleTelemetryUpdate);
+    socket.on('alert:new', handleNewAlert);
+    socket.on('telemetry:offline', handleOffline);
+
+    return () => {
+      socket.off('telemetry:update', handleTelemetryUpdate);
+      socket.off('alert:new', handleNewAlert);
+      socket.off('telemetry:offline', handleOffline);
+    };
+  }, [refreshData]);
 
   const toggleLiveMode = () => setIsLiveMode((prev) => !prev);
 

@@ -21,7 +21,6 @@ import {
 } from 'recharts';
 import {
   Download,
-  FileSpreadsheet,
   Activity,
   Droplets,
   Wrench,
@@ -37,16 +36,6 @@ export const AnalyticsPage: React.FC = () => {
   const { overview, purifiers, alerts } = useTelemetry();
   const { theme } = useTheme();
   const [selectedMetric, setSelectedMetric] = useState<'wqi' | 'ph' | 'tds' | 'turbidity' | 'temp' | 'filter' | 'contaminants' | 'uptime'>('wqi');
-  const [exportDays, setExportDays] = useState(30);
-
-  const avg = overview?.averages || {
-    avgWqi: 91.2,
-    avgTds: 182,
-    avgTurbidity: 0.62,
-    avgFlow: 2.3,
-    avgPh: 7.3,
-  };
-
   const isDark = theme === 'dark';
   const gridStroke = isDark ? '#334155' : '#e2e8f0';
   const textStroke = isDark ? '#94a3b8' : '#64748b';
@@ -59,7 +48,7 @@ export const AnalyticsPage: React.FC = () => {
     { name: 'Safe (Nominal)', value: purifiers.filter((p) => p.status === 'HEALTHY').length, color: '#10b981' },
     { name: 'Warning', value: purifiers.filter((p) => p.status === 'WARNING').length, color: '#f59e0b' },
     { name: 'Critical', value: purifiers.filter((p) => p.status === 'CRITICAL').length, color: '#ef4444' },
-    { name: 'Offline', value: purifiers.filter((p) => p.status === 'OFFLINE').length, color: '#94a3b8' },
+    { name: 'Inactive / Offline', value: purifiers.filter((p) => p.status === 'INACTIVE' || p.status === 'OFFLINE').length, color: '#94a3b8' },
   ];
 
   // 14-day fleet aggregate time trends
@@ -95,58 +84,17 @@ export const AnalyticsPage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Telemetry Analytics & Fleet Intelligence
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Multivariate trends, campus machine rankings, safety distributions, and operational benchmarks.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <a
-            href={api.exportTelemetryUrl(undefined, exportDays)}
+            href={api.exportTelemetryUrl(undefined, 30)}
             download
             className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-sky-600/20 transition-all"
           >
             <Download size={14} />
             <span>Export Sensor CSV</span>
           </a>
-
-          <a
-            href={api.exportMaintenanceUrl()}
-            download
-            className="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all"
-          >
-            <FileSpreadsheet size={14} />
-            <span>Export Work Orders</span>
-          </a>
-        </div>
-      </div>
-
-      {/* Aggregate KPI Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Average Fleet WQI</div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-            {avg.avgWqi} / 100
-          </div>
-          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Optimal Potability</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Fleet Machine Uptime</div>
-          <div className="text-2xl font-black text-sky-600 dark:text-sky-400 font-mono">98.8%</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">{purifiers.filter((p) => p.status !== 'OFFLINE').length}/{purifiers.length || 5} Nodes Online</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Mean Daily Throughput</div>
-          <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono">1,680 L</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Campus consumption</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Active Incident Rate</div>
-          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">{alerts.length}</div>
-          <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">Warnings & criticals</div>
         </div>
       </div>
 
@@ -373,13 +321,13 @@ export const AnalyticsPage: React.FC = () => {
                       <div className="text-[10px] text-slate-400 font-normal">{p.building}</div>
                     </td>
                     <td className="py-2.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {p.currentTelemetry?.wqiScore.toFixed(0)} / 100
+                      {p.status === 'INACTIVE' ? '--' : `${p.currentTelemetry?.wqiScore?.toFixed(0) ?? 90} / 100`}
                     </td>
                     <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
-                      {p.currentTelemetry?.tds.toFixed(0)} ppm
+                      {p.status === 'INACTIVE' ? '--' : `${p.currentTelemetry?.tds?.toFixed(0) ?? 0} ppm`}
                     </td>
                     <td className="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {p.filter?.healthScore.toFixed(0)}%
+                      {p.status === 'INACTIVE' ? 'Standby' : `${p.filter?.healthScore?.toFixed(0) ?? 90}%`}
                     </td>
                     <td className="py-2.5 px-3 text-right">
                       <Link

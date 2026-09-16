@@ -69,20 +69,10 @@ export const FilterHealthPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              Filter Health & Prediction
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1">
-              <BrainCircuit size={12} /> ML RUL Forecast
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Machine-learning membrane fouling prediction, continuous degradation models, and automated service schedules.
-          </p>
-        </div>
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          Filter Health & Prediction
+        </h1>
       </div>
 
       {/* 2. 3 Summary Cards */}
@@ -249,13 +239,14 @@ export const FilterHealthPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
               {purifiers.map((p) => {
                 const f = p.filter;
+                const isInactive = p.status === 'INACTIVE' || p.status === 'OFFLINE';
                 const health = f?.healthScore ?? 80;
                 const rul = f?.estimatedRemainingLifeDays ?? 45;
-                const isHealthy = health >= 70;
-                const isWarning = health >= 35 && health < 70;
-                const isCritical = health < 35;
+                const isHealthy = !isInactive && health >= 70;
+                const isWarning = !isInactive && health >= 35 && health < 70;
+                const isCritical = !isInactive && health < 35;
 
-                const statusLabel = isHealthy ? 'Healthy' : isWarning ? 'Replace Soon' : 'Critical';
+                const statusLabel = isInactive ? 'Inactive' : isHealthy ? 'Healthy' : isWarning ? 'Replace Soon' : 'Critical';
 
                 return (
                   <tr
@@ -263,8 +254,13 @@ export const FilterHealthPage: React.FC = () => {
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                   >
                     <td className="py-3.5 px-4">
-                      <div className="font-bold font-mono text-sky-600 dark:text-sky-400">
-                        {p.purifierCode}
+                      <div className="font-bold font-mono text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+                        <span>{p.purifierCode}</span>
+                        {p.isPhysicalHardware && (
+                          <span className="text-[9px] font-sans px-1 py-0.2 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
+                            Pico W
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400">
                         {p.name}
@@ -275,7 +271,7 @@ export const FilterHealthPage: React.FC = () => {
                         <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              isHealthy ? 'bg-emerald-500' : isWarning ? 'bg-amber-500' : 'bg-rose-500'
+                              isInactive ? 'bg-slate-400' : isHealthy ? 'bg-emerald-500' : isWarning ? 'bg-amber-500' : 'bg-rose-500'
                             }`}
                             style={{ width: `${health}%` }}
                           />
@@ -286,21 +282,23 @@ export const FilterHealthPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {rul <= 3 ? '< 3 Days (Urgent)' : `${rul} Days`}
+                      {isInactive ? 'Standby' : rul <= 3 ? '< 3 Days (Urgent)' : `${rul} Days`}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400">
-                      {f?.dailyUsageLiters || 140} L/day
+                      {isInactive ? '0 L/day' : `${f?.dailyUsageLiters || 140} L/day`}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
                       {f?.lastReplacementDate ? new Date(f.lastReplacementDate).toLocaleDateString() : '3 months ago'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-semibold">
-                      {new Date(Date.now() + rul * 24 * 3600 * 1000).toLocaleDateString()}
+                      {isInactive ? 'Standby' : new Date(Date.now() + rul * 24 * 3600 * 1000).toLocaleDateString()}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          isHealthy
+                          isInactive
+                            ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            : isHealthy
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                             : isWarning
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'

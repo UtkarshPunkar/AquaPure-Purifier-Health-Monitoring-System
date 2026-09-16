@@ -199,7 +199,7 @@ export const AlertsPage: React.FC = () => {
                         {a.title}
                       </span>
                       <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                        {a.purifier?.purifierCode || 'WP-001'}
+                        {a.purifier?.purifierCode || 'WP-1'}
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {a.category}

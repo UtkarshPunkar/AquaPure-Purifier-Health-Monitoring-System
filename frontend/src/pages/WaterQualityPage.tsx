@@ -55,29 +55,33 @@ export const WaterQualityPage: React.FC = () => {
       if (selectedStatus === 'SAFE') matchStatus = p.status === 'HEALTHY';
       if (selectedStatus === 'WARNING') matchStatus = p.status === 'WARNING';
       if (selectedStatus === 'CRITICAL') matchStatus = p.status === 'CRITICAL';
+      if (selectedStatus === 'INACTIVE') matchStatus = p.status === 'INACTIVE';
       return matchPurifier && matchBuilding && matchStatus;
     });
   }, [purifiers, selectedPurifier, selectedBuilding, selectedStatus]);
 
-  // Compute metrics from filtered set
-  const count = filteredPurifiers.length || 1;
-  const avgWqi = Math.round(filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.wqiScore || 90), 0) / count);
-  const avgPh = Number((filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.ph || 7.2), 0) / count).toFixed(1));
-  const avgTds = Math.round(filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.tds || 180), 0) / count);
-  const avgTurbidity = Number((filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.turbidity || 0.6), 0) / count).toFixed(1));
-  const avgTemp = Number((filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.temperature || 24.5), 0) / count).toFixed(1));
-  const avgWaterLevel = Math.round(filteredPurifiers.reduce((acc, p) => acc + (p.currentTelemetry?.waterLevel || 78), 0) / count);
+  // Compute metrics from active filtered set (fallback if only inactive is selected)
+  const activePurifiers = filteredPurifiers.filter((p) => p.status !== 'INACTIVE');
+  const calculationSet = activePurifiers.length > 0 ? activePurifiers : filteredPurifiers;
+  const count = calculationSet.length || 1;
+  const avgWqi = Math.round(calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.wqiScore || 0), 0) / count);
+  const avgPh = Number((calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.ph || 0), 0) / count).toFixed(1));
+  const avgTds = Math.round(calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.tds || 0), 0) / count);
+  const avgTurbidity = Number((calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.turbidity || 0), 0) / count).toFixed(1));
+  const avgTemp = Number((calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.temperature || 0), 0) / count).toFixed(1));
+  const avgFlow = Number((calculationSet.reduce((acc, p) => acc + (p.currentTelemetry?.flowRate || 0), 0) / count).toFixed(2));
 
-  const wqiStatus = avgWqi >= 85 ? 'Safe' : avgWqi >= 65 ? 'Warning' : 'Critical';
+  const isAllInactive = calculationSet.every((p) => p.status === 'INACTIVE');
+  const wqiStatus = isAllInactive ? 'Standby (Inactive)' : avgWqi >= 85 ? 'Safe' : avgWqi >= 65 ? 'Warning' : 'Critical';
 
   // Multi-purifier comparison bar data
   const comparisonData = useMemo(() => {
     return filteredPurifiers.map((p) => ({
-      code: p.purifierCode,
-      wqi: p.currentTelemetry?.wqiScore || 90,
-      tds: p.currentTelemetry?.tds || 150,
-      turbidity: p.currentTelemetry?.turbidity ? p.currentTelemetry.turbidity * 50 : 30, // scaled for view
-      ph: p.currentTelemetry?.ph ? p.currentTelemetry.ph * 10 : 72,
+      code: p.purifierCode + (p.status === 'INACTIVE' ? ' (Inactive)' : ''),
+      wqi: p.status === 'INACTIVE' ? 0 : (p.currentTelemetry?.wqiScore || 90),
+      tds: p.status === 'INACTIVE' ? 0 : (p.currentTelemetry?.tds || 150),
+      turbidity: p.status === 'INACTIVE' ? 0 : (p.currentTelemetry?.turbidity ? p.currentTelemetry.turbidity * 50 : 30),
+      ph: p.status === 'INACTIVE' ? 0 : (p.currentTelemetry?.ph ? p.currentTelemetry.ph * 10 : 72),
     }));
   }, [filteredPurifiers]);
 
@@ -195,6 +199,7 @@ export const WaterQualityPage: React.FC = () => {
                 <option value="SAFE">Safe Units Only</option>
                 <option value="WARNING">Warning Units</option>
                 <option value="CRITICAL">Critical Units</option>
+                <option value="INACTIVE">Inactive / Offline</option>
               </select>
             </div>
 
@@ -253,7 +258,7 @@ export const WaterQualityPage: React.FC = () => {
 
           <div className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-xl text-center text-xs text-slate-500 dark:text-slate-400">
             {wqiStatus === 'Safe'
-              ? 'Meets 100% of NSF & WHO drinking potability standards.'
+              ? 'Meets 100% of drinking potability safety standards.'
               : 'Requires filter maintenance attention.'}
           </div>
         </div>
@@ -263,7 +268,7 @@ export const WaterQualityPage: React.FC = () => {
             <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 mb-2">
               <Scale size={18} />
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                NSF / WHO Standardized WQI Calculation Model
+                Standardized WQI Calculation Model
               </h3>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
@@ -342,11 +347,13 @@ export const WaterQualityPage: React.FC = () => {
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs col-span-2 sm:col-span-1">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>Water Level</span>
-            <Filter size={14} className="text-indigo-500" />
+            <span>Water Flow</span>
+            <Activity size={14} className="text-indigo-500" />
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">{avgWaterLevel}%</div>
-          <div className="text-[10px] text-sky-600 dark:text-sky-400 font-bold mt-1">Tank Capacity</div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+            {avgFlow} <span className="text-xs font-normal text-slate-400">L/min</span>
+          </div>
+          <div className="text-[10px] text-sky-600 dark:text-sky-400 font-bold mt-1">Dispense Flow Rate</div>
         </div>
       </div>
 
@@ -394,7 +401,7 @@ export const WaterQualityPage: React.FC = () => {
             <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase font-semibold">
               <tr>
                 <th className="py-2.5 px-3">Parameter</th>
-                <th className="py-2.5 px-3">WHO / Safe Standard</th>
+                <th className="py-2.5 px-3">Safe Standard Limit</th>
                 <th className="py-2.5 px-3 font-mono">Fleet Mean</th>
                 <th className="py-2.5 px-3 font-mono">Model Weight</th>
                 <th className="py-2.5 px-3">Significance</th>

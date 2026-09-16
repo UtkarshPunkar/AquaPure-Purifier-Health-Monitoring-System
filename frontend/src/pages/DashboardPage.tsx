@@ -26,6 +26,7 @@ import {
   TrendingUp,
   ArrowUpRight,
   Check,
+  Clock,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -48,38 +49,50 @@ export const DashboardPage: React.FC = () => {
   const { purifiers, alerts, isLiveMode, refreshData } = useTelemetry();
   const navigate = useNavigate();
 
-  // Active Category Tab (Matching reference image: Booking, Amenities, Customization, Locality)
-  const [activeTab, setActiveTab] = useState<'overview' | 'health' | 'ai' | 'campus'>('overview');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'quality' | 'health' | 'safety' | 'maintenance'>('all');
-
-  const dashboardFilters = [
-    { id: 'all', label: 'All Filters' },
-    { id: 'quality', label: 'Water Quality' },
-    { id: 'health', label: 'Fleet Health' },
-    { id: 'safety', label: 'Safety' },
-    { id: 'maintenance', label: 'Maintenance' },
-  ] as const;
-
   // Greeting
   const userName = user?.name || 'Campus Administrator';
 
+  // 5 standard filters for S.B. Jain campus
+  const fiveFilters = useMemo(() => {
+    return purifiers.slice(0, 5);
+  }, [purifiers]);
+
+  // Average health of all 5 filters
+  const avgFilterHealth = useMemo(() => {
+    const total = fiveFilters.reduce((sum, p) => sum + (p.filter?.healthScore ?? 98), 0);
+    return Math.round(total / 5);
+  }, [fiveFilters]);
+
+  // Total water flow of all 5 filters
+  const totalWaterFlow = useMemo(() => {
+    const sumDaily = fiveFilters.reduce((sum, p) => sum + (p.filter?.dailyUsageLiters ?? 4800), 0);
+    return sumDaily || 24000;
+  }, [fiveFilters]);
+
+  // Sorted list of 5 campus purifiers
+  const sortedPurifiers = useMemo(() => {
+    return [...purifiers.slice(0, 5)].sort((a, b) =>
+      a.purifierCode.localeCompare(b.purifierCode, undefined, { numeric: true })
+    );
+  }, [purifiers]);
+
   // KPI Calculations
   const totalPurifiers = purifiers.length || 5;
-  const activePurifiers = purifiers.filter((p) => p.status !== 'OFFLINE').length;
-  const safeUnits = purifiers.filter((p) => p.status === 'HEALTHY').length;
+  const activePurifiers = purifiers.filter((p) => p.status !== 'OFFLINE' && p.status !== 'INACTIVE').length;
+  const safeUnits = purifiers.filter((p) => p.status === 'HEALTHY' || p.status === 'ACTIVE').length;
   const warningUnits = purifiers.filter((p) => p.status === 'WARNING').length;
   const criticalUnits = purifiers.filter((p) => p.status === 'CRITICAL').length;
   const activeAlerts = alerts.filter((a) => !a.isResolved).length;
 
   // Water Quality Overview averages
-  const activeList = purifiers.filter((p) => p.status !== 'OFFLINE');
+  const activeList = purifiers.filter((p) => p.status !== 'OFFLINE' && p.status !== 'INACTIVE');
   const count = activeList.length || 1;
 
   const avgPh = Number((activeList.reduce((acc, p) => acc + (p.currentTelemetry?.ph || 7.2), 0) / count).toFixed(1));
   const avgTds = Math.round(activeList.reduce((acc, p) => acc + (p.currentTelemetry?.tds || 180), 0) / count);
   const avgTurbidity = Number((activeList.reduce((acc, p) => acc + (p.currentTelemetry?.turbidity || 0.6), 0) / count).toFixed(1));
   const avgTemp = Number((activeList.reduce((acc, p) => acc + (p.currentTelemetry?.temperature || 24.5), 0) / count).toFixed(1));
-  const avgWaterLevel = Math.round(activeList.reduce((acc, p) => acc + (p.currentTelemetry?.waterLevel || 78), 0) / count);
+  const avgFlow = Number((activeList.reduce((acc, p) => acc + (p.currentTelemetry?.flowRate || 2.4), 0) / count).toFixed(2));
 
   // Status helper for Water Quality Overview
   const getPhStatus = (ph: number) => {
@@ -105,10 +118,17 @@ export const DashboardPage: React.FC = () => {
   const turbStatus = getTurbidityStatus(avgTurbidity);
 
   // Sparkline mini data
-  const sparklineData = [
-    { value: 160 }, { value: 165 }, { value: 172 }, { value: 168 },
-    { value: 175 }, { value: 182 }, { value: 178 }, { value: 180 },
-  ];
+  const sparklineData = useMemo(() => {
+    return [
+      { t: '08:00', wqi: 94 },
+      { t: '09:00', wqi: 92 },
+      { t: '10:00', wqi: 89 },
+      { t: '11:00', wqi: 93 },
+      { t: '12:00', wqi: 95 },
+      { t: '13:00', wqi: 91 },
+      { t: '14:00', wqi: 94 },
+    ];
+  }, []);
 
   // Distribution chart data
   const statusPieData = [
@@ -170,243 +190,132 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Sub-Header Tabs: Booking / Amenities / Customization / Locality style */}
-            <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 text-xs font-bold">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                  activeTab === 'overview'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Fleet Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('health')}
-                className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                  activeTab === 'health'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Filter Health
-              </button>
-              <button
-                onClick={() => setActiveTab('ai')}
-                className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                  activeTab === 'ai'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                AI Scans
-              </button>
-              <button
-                onClick={() => setActiveTab('campus')}
-                className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                  activeTab === 'campus'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                S.B. Jain Campus
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              {dashboardFilters.map((filter) => {
-                const isActive = selectedFilter === filter.id;
-                return (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    onClick={() => setSelectedFilter(filter.id)}
-                    className={`min-w-[110px] rounded-2xl border px-3 py-2 text-[11px] font-bold tracking-wide transition-all shadow-sm ${
-                      isActive
-                        ? 'border-sky-200 bg-sky-500 text-white shadow-sky-200/80'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-sky-400'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
-          {/* Top Hero Cards (Matching the reference card proportions and compact styling) */}
+          {/* Top Hero Cards (Matching Reference Image Dimensions & Style) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {/* Card 1: Water Quality / TDS Score with Sparkline */}
-            <div className="bg-white dark:bg-slate-900 px-4 py-3.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_22px_rgba(15,23,42,0.06)] flex flex-col justify-between min-h-[170px]">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold tracking-[0.02em]">
-                  <span>Water Quality Index</span>
-                  <TrendingUp size={14} className="text-emerald-500" />
-                </div>
-                <div className="flex items-baseline gap-1.5 text-[28px] sm:text-[32px] font-black text-slate-900 dark:text-white font-mono leading-none">
-                  <span>{avgTds}</span>
-                  <span className="text-[11px] font-normal text-slate-400 tracking-[0.08em] uppercase">PPM</span>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
-                  100% Safe Drinking Quality
+            {/* Card 1: Filter Active Status */}
+            <div className="bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px]">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 tracking-wider uppercase">
+                  Filter Active Status
                 </span>
+                <Activity size={16} className="text-emerald-500" />
               </div>
 
-              <div className="h-10 w-full mt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={sparklineData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#0284c7"
-                      strokeWidth={2.5}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="space-y-1 py-1">
+                {fiveFilters.map((filter, index) => {
+                  const isActive = filter.status !== 'OFFLINE' && filter.status !== 'INACTIVE';
+                  return (
+                    <div
+                      key={filter.id || index}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {index + 1}. Filter {index + 1}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                          isActive
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-slate-400 dark:text-slate-500'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isActive
+                              ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]'
+                              : 'bg-slate-400'
+                          }`}
+                        />
+                        ({isActive ? 'Active' : 'Inactive'})
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                <span>Total: 5 Campus Filters</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  {fiveFilters.filter((p) => p.status !== 'OFFLINE' && p.status !== 'INACTIVE').length}/5 Active
+                </span>
               </div>
             </div>
 
-            {/* Card 2: Bright Yellow Health Score Card */}
-            <div className="bg-[#F0BF38] px-4 py-3.5 rounded-[28px] text-slate-950 shadow-[0_10px_26px_rgba(240,191,56,0.22)] flex flex-col justify-between relative overflow-hidden min-h-[170px]">
-              <div className="flex items-center justify-between text-[12px] font-bold opacity-90">
-                <span>Fleet Health Score</span>
+            {/* Card 2: Average Health of All Filters */}
+            <div className="bg-[#F0BF38] p-4 sm:p-4.5 rounded-[26px] text-slate-950 shadow-[0_10px_26px_rgba(240,191,56,0.22)] flex flex-col justify-between h-[210px] relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs font-bold opacity-90 pb-1">
+                <span>Average Filter Health</span>
                 <ShieldCheck size={18} />
               </div>
-              <div className="space-y-1.5 pt-2">
-                <div className="text-[48px] sm:text-[54px] font-black font-mono tracking-[-0.06em] leading-none">
-                  98%
+
+              <div className="my-auto py-1">
+                <div className="text-[44px] sm:text-[48px] font-black font-mono tracking-tight leading-none text-slate-950">
+                  {avgFilterHealth}%
                 </div>
-                <span className="text-[11px] font-bold opacity-90 block leading-snug">
-                  All 5 Purifier Units Operational
+                <span className="text-xs font-semibold text-slate-900/90 mt-1 block leading-snug">
+                  Average Health of All 5 Filters
                 </span>
               </div>
-              <div className="text-[10px] font-semibold opacity-75 pt-2">
-                S.B. Jain Institute Grid
+
+              <div className="text-[10px] font-semibold text-slate-900/75 pt-1.5 flex items-center justify-between border-t border-slate-950/10">
+                <span>S.B. Jain Institute Grid</span>
+                <span>All 5 Units</span>
               </div>
             </div>
 
-            {/* Card 3: Smart fleet card */}
-            <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white px-4 py-3.5 flex flex-col justify-between shadow-[0_10px_30px_rgba(15,23,42,0.35)] border border-sky-900/60 min-h-[170px] group">
-              <div className="flex items-center justify-between z-10">
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/40 tracking-[0.12em]">
-                  SMART FLEET
+            {/* Card 3: Total Water Flow & Peak Hours (White Minimal Card) */}
+            <div className="bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px]">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Droplets size={15} className="text-sky-500 shrink-0" />
+                  <span>Total Water Flow</span>
+                </div>
+              </div>
+
+              <div className="my-auto py-1">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">
+                  Total Water Flow of All Filters
                 </span>
+                <div className="text-[30px] sm:text-[34px] font-black font-mono text-slate-900 dark:text-white tracking-tight leading-tight mt-0.5">
+                  {totalWaterFlow.toLocaleString()}{' '}
+                  <span className="text-sm font-semibold text-sky-500 font-sans uppercase">
+                    Liters
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                  <Clock size={13} className="text-sky-500 shrink-0" />
+                  <span>
+                    Peak Hours:{' '}
+                    <strong className="text-slate-900 dark:text-white font-mono font-bold">
+                      12:00 PM – 02:00 PM
+                    </strong>
+                  </span>
+                </div>
                 <Link
                   to="/purifiers"
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-[#00E5FF] hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
+                  className="p-1 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  title="View Purifiers"
                 >
-                  <ArrowUpRight size={14} />
+                  <ArrowUpRight size={15} />
                 </Link>
               </div>
-
-              <div className="space-y-1.5 z-10 pt-2">
-                <div className="text-[21px] font-black leading-tight text-white">
-                  5 Campus Nodes
-                </div>
-                <p className="text-[11px] text-sky-200/80 leading-relaxed">
-                  Live IoT Telemetry &amp; UV Filtration
-                </p>
-              </div>
-
-              <div className="flex items-end justify-between gap-2 text-[10px] text-sky-300/90 z-10 pt-2 border-t border-white/10">
-                <span>Today's Flow: 24,000L</span>
-                <span className="text-emerald-400 font-bold font-mono">99.9% Uptime</span>
-              </div>
             </div>
           </div>
 
-          {/* Water Quality Overview Metrics */}
+          {/* 1. Purifier Fleet Status Table (Minimal & Sorted) */}
           <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Live Water Quality Telemetry
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Real-time sensor metrics aggregated across S.B. Jain Campus
-                </p>
-              </div>
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Sync Live</span>
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* pH Card */}
-              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span>pH Balance</span>
-                  <Gauge size={14} className="text-sky-500" />
-                </div>
-                <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                  {avgPh} <span className="text-xs font-normal text-slate-400">pH</span>
-                </div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border mt-2 inline-block ${phStatus.color}`}>
-                  {phStatus.text}
-                </span>
-              </div>
-
-              {/* TDS Card */}
-              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span>TDS Level</span>
-                  <Droplets size={14} className="text-cyan-500" />
-                </div>
-                <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                  {avgTds} <span className="text-xs font-normal text-slate-400">PPM</span>
-                </div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border mt-2 inline-block ${tdsStatus.color}`}>
-                  {tdsStatus.text}
-                </span>
-              </div>
-
-              {/* Turbidity Card */}
-              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span>Turbidity</span>
-                  <Waves size={14} className="text-teal-500" />
-                </div>
-                <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                  {avgTurbidity} <span className="text-xs font-normal text-slate-400">NTU</span>
-                </div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border mt-2 inline-block ${turbStatus.color}`}>
-                  {turbStatus.text}
-                </span>
-              </div>
-
-              {/* Temperature Card */}
-              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span>Temperature</span>
-                  <Thermometer size={14} className="text-amber-500" />
-                </div>
-                <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                  {avgTemp}°C
-                </div>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 mt-2 inline-block">
-                  Nominal
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Purifier Fleet Status Table (Strictly 5 Purifiers) */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  S.B. Jain Campus Purifier Fleet (5 Units)
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Instant telemetry, filter health, and location status
-                </p>
-              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                S.B. Jain Campus Purifier Fleet (5 Units)
+              </h3>
               <Link
                 to="/purifiers"
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 transition-colors"
               >
                 <span>View Fleet</span>
                 <ArrowRight size={13} />
@@ -415,57 +324,189 @@ export const DashboardPage: React.FC = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
+                <thead className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
                   <tr>
                     <th className="py-2.5 px-3">Node Code</th>
                     <th className="py-2.5 px-3">Purifier Name</th>
-                    <th className="py-2.5 px-3">Building Location</th>
-                    <th className="py-2.5 px-3">TDS Telemetry</th>
+                    <th className="py-2.5 px-3">Location</th>
                     <th className="py-2.5 px-3">Filter Health</th>
-                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {purifiers.slice(0, 5).map((p) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/purifiers/${p.id}`)}
-                    >
-                      <td className="py-3 px-3 font-mono font-bold text-[#0284c7] dark:text-[#00E5FF]">
-                        {p.purifierCode}
-                      </td>
-                      <td className="py-3 px-3 font-medium text-slate-900 dark:text-white">
-                        {p.name}
-                      </td>
-                      <td className="py-3 px-3 text-slate-500 dark:text-slate-400">
-                        {p.building}
-                      </td>
-                      <td className="py-3 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {p.currentTelemetry?.tds || 150} ppm
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2 font-mono">
-                          <div className="w-16 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="bg-emerald-500 h-full rounded-full"
-                              style={{ width: `${p.filter?.healthScore || 85}%` }}
-                            />
-                          </div>
-                          <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {p.filter?.healthScore || 85}%
+                <tbody className="divide-y divide-slate-100/80 dark:divide-slate-800/80">
+                  {sortedPurifiers.map((p) => {
+                    const healthScoreVal = Math.round(p.filter?.healthScore ?? 85);
+                    const isHealthy = p.status === 'HEALTHY' || p.status === 'ACTIVE';
+                    const isWarning = p.status === 'WARNING';
+                    const isCritical = p.status === 'CRITICAL';
+
+                    const healthColor =
+                      healthScoreVal >= 70
+                        ? 'bg-emerald-500'
+                        : healthScoreVal >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500';
+
+                    return (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                        onClick={() => navigate(`/purifiers/${p.id}`)}
+                      >
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-bold text-sky-600 dark:text-[#00E5FF] bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded-md border border-sky-200/60 dark:border-sky-800/60 text-[11px]">
+                            {p.purifierCode}
                           </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                          {p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-[#00E5FF] transition-colors">
+                          {p.name}
+                        </td>
+                        <td className="py-3 px-3 text-slate-500 dark:text-slate-400">
+                          {p.building}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-16 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`${healthColor} h-full rounded-full transition-all duration-300`}
+                                style={{ width: `${healthScoreVal}%` }}
+                              />
+                            </div>
+                            <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                              {healthScoreVal}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              isHealthy
+                                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800'
+                                : isWarning
+                                ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800'
+                                : isCritical
+                                ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isHealthy
+                                  ? 'bg-emerald-500'
+                                  : isWarning
+                                  ? 'bg-amber-500'
+                                  : isCritical
+                                  ? 'bg-rose-500'
+                                  : 'bg-slate-400'
+                              }`}
+                            />
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* 2. Water Quality Standards & Ideal Benchmarks */}
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Ideal Water Quality Standards
+              </h3>
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-bold">
+                <ShieldCheck size={13} className="text-emerald-500" />
+                <span>Optimal Standard</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* pH Balance Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">pH Balance</span>
+                    <Gauge size={14} className="text-sky-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                    6.5 – 8.5 <span className="text-xs font-normal text-slate-400">pH</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                    Neutral Safe Range
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 inline-block">
+                    Ideal: 7.0 pH
+                  </span>
+                </div>
+              </div>
+
+              {/* TDS Level Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">TDS Level</span>
+                    <Droplets size={14} className="text-cyan-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                    50 – 300 <span className="text-xs font-normal text-slate-400">PPM</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                    Optimal Mineral Balance
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 inline-block">
+                    Standard: &lt; 300 PPM
+                  </span>
+                </div>
+              </div>
+
+              {/* Turbidity Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Turbidity</span>
+                    <Waves size={14} className="text-teal-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                    0.0 – 1.0 <span className="text-xs font-normal text-slate-400">NTU</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                    Clear Optical Clarity
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 inline-block">
+                    Standard: &lt; 1.0 NTU
+                  </span>
+                </div>
+              </div>
+
+              {/* Temperature Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Temperature</span>
+                    <Thermometer size={14} className="text-amber-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                    10 – 25 <span className="text-xs font-normal text-slate-400">°C</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                    Ambient Dispenser Range
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 inline-block">
+                    Optimal: 15 – 22°C
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

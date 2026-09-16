@@ -29,7 +29,7 @@ export const AppLayout: React.FC = () => {
               </div>
             </div>
             <div className="sm:text-right text-[11px]">
-              <div>WHO & NSF-WQI Compliant Telemetry Protocol</div>
+              <div>Smart Water Telemetry &amp; AI Diagnostic Grid</div>
               <div className="text-sky-600 dark:text-sky-400 mt-0.5">Raspberry Pi Pico W & ESP32-CAM Retrofit Ready</div>
             </div>
           </footer>

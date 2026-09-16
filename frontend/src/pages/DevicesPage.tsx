@@ -21,7 +21,7 @@ export const DevicesPage: React.FC = () => {
   // Playground custom payload
   const [mockPayload, setMockPayload] = useState({
     deviceId: 'PICO-W-001',
-    purifierCode: 'PUR-001',
+    purifierCode: 'WP-1',
     ph: 7.25,
     tds: 165,
     turbidity: 0.45,
@@ -116,7 +116,7 @@ export const DevicesPage: React.FC = () => {
 
             <div className="pt-2 border-t app-divider text-[11px] font-mono app-muted flex justify-between">
               <span>Last Seen:</span>
-              <span>{new Date(d.lastSeen).toLocaleTimeString()}</span>
+              <span>{d.lastSeen ? new Date(d.lastSeen).toLocaleTimeString() : 'Awaiting Connection'}</span>
             </div>
           </div>
         ))}

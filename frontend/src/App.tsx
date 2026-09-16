@@ -45,6 +45,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const TechnicalHeadRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  const isTechHead = user?.role === 'TECHNICAL_HEAD' || user?.email?.toLowerCase() === 'utkarshpunkar7@gmail.com';
+
+  if (!isTechHead) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export function App() {
   return (
     <BrowserRouter>
@@ -75,7 +91,14 @@ export function App() {
                 <Route path="maintenance" element={<MaintenancePage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
-                <Route path="users" element={<UsersPage />} />
+                <Route
+                  path="users"
+                  element={
+                    <TechnicalHeadRoute>
+                      <UsersPage />
+                    </TechnicalHeadRoute>
+                  }
+                />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="predictive-maintenance" element={<PredictiveMaintenancePage />} />
               </Route>

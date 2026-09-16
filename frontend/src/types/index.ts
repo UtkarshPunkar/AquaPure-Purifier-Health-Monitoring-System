@@ -1,5 +1,5 @@
-export type PurifierStatus = 'HEALTHY' | 'WARNING' | 'CRITICAL' | 'OFFLINE' | 'MAINTENANCE_DUE';
-export type WqiStatus = 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL';
+export type PurifierStatus = 'HEALTHY' | 'ACTIVE' | 'WARNING' | 'CRITICAL' | 'OFFLINE' | 'INACTIVE' | 'MAINTENANCE_DUE';
+export type WqiStatus = 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL' | 'STANDBY';
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type AlertSeverity = 'CRITICAL' | 'WARNING' | 'INFO' | 'PREDICTIVE' | 'MAINTENANCE' | 'OFFLINE';
 export type SimulationScenario = 'NORMAL' | 'FILTER_DEGRADATION' | 'TURBIDITY_BURST' | 'TDS_SPIKE' | 'DEVICE_OFFLINE';
@@ -30,7 +30,7 @@ export interface TelemetryReading {
   wqiScore: number;
   wqiStatus: WqiStatus;
   filterHealth?: number;
-  lastSeen?: string | Date;
+  lastSeen?: string | Date | null;
 }
 
 export interface FilterInfo {
@@ -53,10 +53,10 @@ export interface DeviceInfo {
   ipAddress: string;
   macAddress: string;
   wifiRssi: number;
-  lastSeen: string | Date;
-  status: 'ONLINE' | 'OFFLINE' | 'DEGRADED';
+  lastSeen: string | Date | null;
+  status: 'ONLINE' | 'OFFLINE' | 'DEGRADED' | 'INACTIVE';
   oledStatus: string;
-  ledStatus: 'GREEN_NORMAL' | 'YELLOW_WARNING' | 'RED_CRITICAL';
+  ledStatus: 'GREEN_NORMAL' | 'YELLOW_WARNING' | 'RED_CRITICAL' | 'OFF';
   buzzerStatus: boolean;
 }
 

@@ -1,273 +1,538 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
-import { useTelemetry } from '../context/TelemetryContext';
 import { AiDetectionItem, Purifier } from '../types';
 import {
   ScanEye,
   CheckCircle2,
   AlertTriangle,
-  AlertCircle,
+  XCircle,
+  Eye,
   Camera,
-  RefreshCw,
-  Plus,
-  X,
-  ExternalLink,
+  Play,
+  RotateCcw,
   Sparkles,
   Search,
-  SlidersHorizontal,
-  Eye,
+  Filter,
+  Layers,
+  X,
+  Radio,
+  WifiOff,
+  Maximize2,
+  RefreshCw,
+  Sliders,
+  Check,
+  Globe,
+  HelpCircle,
   ShieldCheck,
-  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 
 export const AiDetectionPage: React.FC = () => {
-  const { purifiers } = useTelemetry();
   const [detections, setDetections] = useState<AiDetectionItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filterClass, setFilterClass] = useState('ALL');
-  const [filterRisk, setFilterRisk] = useState('ALL');
-  const [search, setSearch] = useState('');
-
-  // Modals
+  const [purifiers, setPurifiers] = useState<Purifier[]>([]);
   const [selectedDetection, setSelectedDetection] = useState<AiDetectionItem | null>(null);
-  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
-  const [scanPurifierId, setScanPurifierId] = useState('');
-  const [scanSampleType, setScanSampleType] = useState('Algae');
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<AiDetectionItem | null>(null);
+  const [viewMode, setViewMode] = useState<'SNAPSHOT' | 'LIVE'>('SNAPSHOT');
+  const [filterRisk, setFilterRisk] = useState<string>('ALL');
+  const [filterPurifier, setFilterPurifier] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [isCameraOnline, setIsCameraOnline] = useState<boolean>(false);
+  const [selectedPurifierId, setSelectedPurifierId] = useState<string>('');
+  const [cameraIp, setCameraIp] = useState<string>('192.168.4.1');
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isDiscovering, setIsDiscovering] = useState<boolean>(false);
+  const [connectMessage, setConnectMessage] = useState<string | null>(null);
+  const [streamKey, setStreamKey] = useState<number>(Date.now());
+  const [useDirectStream, setUseDirectStream] = useState<boolean>(false);
+  const [showConfigBar, setShowConfigBar] = useState<boolean>(false);
+  const [isStreamStalled, setIsStreamStalled] = useState<boolean>(false);
 
-  const fetchDetections = async () => {
+  const failedProbesRef = useRef<number>(0);
+
+  const fetchData = async () => {
     try {
-      setIsLoading(true);
-      const data = await api.getAiDetections();
-      setDetections(data);
+      const [detList, purList] = await Promise.all([
+        api.getAiDetections(),
+        api.getPurifiers(),
+      ]);
+      setDetections(detList);
+      setPurifiers(purList);
+      if (purList.length > 0 && !selectedPurifierId) {
+        setSelectedPurifierId(purList[0].id);
+      }
     } catch (err) {
       console.error('Failed to load AI detections:', err);
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const probeCamera = async () => {
+    try {
+      const status = await api.getCameraStatus('ESP32-CAM-1');
+      if (status.isOnline) {
+        failedProbesRef.current = 0;
+        setIsCameraOnline(true);
+      } else {
+        failedProbesRef.current += 1;
+        // Require 3 consecutive failed probes before flipping offline (anti-fluctuation smoothing)
+        if (failedProbesRef.current >= 3) {
+          setIsCameraOnline(false);
+        }
+      }
+
+      if (status.streamUrl) {
+        const match = status.streamUrl.match(/\/\/([^/:]+)/);
+        if (match && match[1]) {
+          setCameraIp(match[1]);
+        }
+      }
+    } catch {
+      failedProbesRef.current += 1;
+      if (failedProbesRef.current >= 3) {
+        setIsCameraOnline(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchDetections();
+    fetchData();
+    probeCamera();
+
+    // 7-second status health heartbeat to avoid flooding the single-threaded ESP32
+    const timer = setInterval(() => {
+      probeCamera();
+    }, 7000);
+
+    return () => clearInterval(timer);
   }, []);
 
-  // Summary Metrics
-  const scansToday = detections.length + 40;
-  const cleanResults = detections.filter((d) => d.detectedObject === 'Clean Water').length + 35;
-  const contaminantsDetected = detections.filter((d) => d.detectedObject !== 'Clean Water').length;
-  const accuracy = '96.4%';
+  const handleConnectCamera = async (targetIp?: string) => {
+    const ipToUse = targetIp || cameraIp;
+    try {
+      setIsConnecting(true);
+      setConnectMessage('Connecting & testing stream...');
+      const res = await api.updateCameraConfig({
+        deviceId: 'ESP32-CAM-1',
+        ipAddress: ipToUse,
+      });
+      failedProbesRef.current = 0;
+      setIsCameraOnline(res.isOnline);
+      if (res.isOnline) {
+        setConnectMessage(`Connected to ESP32-CAM at ${ipToUse}! Live feed active.`);
+        setStreamKey(Date.now());
+      } else {
+        setConnectMessage(`Camera IP saved. Waiting for ESP32-CAM at ${ipToUse} to respond...`);
+      }
+    } catch (err: any) {
+      setConnectMessage('Connection test failed. Check power & Wi-Fi.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
-  // Filtered Detections
-  const filtered = detections.filter((d) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      d.detectedObject.toLowerCase().includes(q) ||
-      (d.purifier?.name && d.purifier.name.toLowerCase().includes(q)) ||
-      (d.purifier?.purifierCode && d.purifier.purifierCode.toLowerCase().includes(q));
+  const handleAutoDiscover = async () => {
+    try {
+      setIsDiscovering(true);
+      setConnectMessage('Scanning local network & AP (192.168.4.1, 192.168.43.x, 192.168.1.x)...');
+      const res = await api.autoDiscoverCamera();
+      if (res.found && res.ipAddress) {
+        failedProbesRef.current = 0;
+        setCameraIp(res.ipAddress);
+        setIsCameraOnline(true);
+        setConnectMessage(res.message || `Discovered ESP32-CAM at ${res.ipAddress}!`);
+        setStreamKey(Date.now());
+      } else {
+        setConnectMessage(res.message || 'No active ESP32-CAM found. Connect to AquaPure-CAM Wi-Fi.');
+      }
+    } catch {
+      setConnectMessage('Auto-discovery encountered an error.');
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
 
-    const matchesClass = filterClass === 'ALL' || d.detectedObject === filterClass;
-    const matchesRisk = filterRisk === 'ALL' || d.riskLevel === filterRisk;
+  const handleRefreshStream = () => {
+    setStreamKey(Date.now());
+    setIsStreamStalled(false);
+    failedProbesRef.current = 0;
+    probeCamera();
+  };
 
-    return matchesSearch && matchesClass && matchesRisk;
-  });
-
-  const handleRunScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scanPurifierId) return;
-
+  const handleRunScan = async (sampleType?: string) => {
+    if (!selectedPurifierId) return;
     try {
       setIsScanning(true);
-      const res = await api.runAiScan(scanPurifierId, scanSampleType);
-      setScanResult(res.scanResult);
-      await fetchDetections();
+      const res = await api.runAiScan(selectedPurifierId, sampleType);
+      if (res.scanResult) {
+        setDetections((prev) => [res.scanResult, ...prev]);
+        setSelectedDetection(res.scanResult);
+        setViewMode('SNAPSHOT');
+      }
     } catch (err) {
-      console.error('Failed to run AI scan:', err);
+      console.error('Scan execution error:', err);
     } finally {
       setIsScanning(false);
     }
   };
 
+  const filteredDetections = detections.filter((d) => {
+    const matchesRisk = filterRisk === 'ALL' || d.riskLevel === filterRisk;
+    const matchesPurifier = filterPurifier === 'ALL' || d.purifierId === filterPurifier || d.purifier?.purifierCode === filterPurifier;
+    const matchesSearch =
+      searchQuery === '' ||
+      d.detectedObject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (d.purifier?.name && d.purifier.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (d.purifier?.purifierCode && d.purifier.purifierCode.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesRisk && matchesPurifier && matchesSearch;
+  });
+
+  // KPIs
+  const totalScans = detections.length;
+  const criticalContaminants = detections.filter((d) => d.riskLevel === 'CRITICAL').length;
+  const warnings = detections.filter((d) => d.riskLevel === 'WARNING').length;
+  const safePurityScans = detections.filter((d) => d.riskLevel === 'SAFE').length;
+
+  const streamSrc = useDirectStream
+    ? `http://${cameraIp}/stream`
+    : `/api/camera/stream/ESP32-CAM-1?t=${streamKey}`;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="border-b app-divider pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              AI Contaminant Detection
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 flex items-center gap-1">
-              <Sparkles size={12} /> Computer Vision
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time camera inspection pipeline detecting biological and particulate water contaminants.
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight app-heading flex items-center gap-2">
+            <ScanEye className="text-sky-600 dark:text-sky-400" size={24} />
+            AI Contaminant Vision & Optical Inspection
+          </h1>
+          <p className="text-xs sm:text-sm app-muted mt-0.5">
+            Real-time microscopic classification of water particulate, micro-algae, and foreign organisms via ESP32-CAM OV2640.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Live Camera Node Indicator & Actions */}
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => fetchDetections()}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs"
-            title="Refresh AI logs"
+            onClick={() => setShowConfigBar(!showConfigBar)}
+            className="secondary-button text-xs flex items-center gap-1.5 py-1.5 px-3"
+            title="Configure Camera IP"
           >
-            <RefreshCw size={15} />
+            <Sliders size={13} />
+            <span>Camera Config</span>
           </button>
+
           <button
-            onClick={() => {
-              setScanPurifierId(purifiers[0]?.id || '');
-              setScanResult(null);
-              setIsScanModalOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-sky-600/20"
+            onClick={handleRefreshStream}
+            className="secondary-button text-xs flex items-center gap-1.5 py-1.5 px-3"
+            title="Refresh stream connection"
           >
-            <Camera size={15} />
-            <span>+ Run AI Scan</span>
+            <RefreshCw size={13} />
+            <span>Refresh Stream</span>
           </button>
+
+          {isCameraOnline ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              ESP32-CAM LIVE ONLINE
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-full">
+              <WifiOff size={13} />
+              STANDBY / READY TO CONNECT
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 2. KPI Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        {/* AI Scans Today */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>AI Scans Today</span>
-            <ScanEye size={16} className="text-sky-500" />
+      {/* 2. ESP32-CAM Connection & IP Configuration Bar */}
+      <div className={`app-card p-4 space-y-3 transition-all ${showConfigBar || !isCameraOnline ? 'block' : 'hidden'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b app-divider pb-2.5">
+          <div className="flex items-center gap-2">
+            <Camera size={16} className="text-sky-600 dark:text-sky-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider app-heading">
+              ESP32-CAM Hardware Network Link (AI-Thinker OV2640)
+            </h3>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-            {scansToday}
+          <div className="text-[11px] app-muted flex items-center gap-2">
+            <span>Default AP: <code className="font-mono text-sky-600 dark:text-sky-400 font-bold">192.168.4.1</code></span>
+            <span>&bull;</span>
+            <span>Wi-Fi SSID: <code className="font-mono text-slate-700 dark:text-slate-300 font-semibold">AquaPure-CAM</code></span>
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Automated frame captures</div>
         </div>
 
-        {/* Clean Results */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>Clean Results</span>
-            <CheckCircle2 size={16} className="text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-            {cleanResults}
-          </div>
-          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">100% Optical Clarity</div>
-        </div>
-
-        {/* Contaminants Detected */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>Contaminants Detected</span>
-            <AlertTriangle size={16} className="text-rose-500" />
-          </div>
-          <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
-            {contaminantsDetected}
-          </div>
-          <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">Flagged for sanitization</div>
-        </div>
-
-        {/* Detection Accuracy */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>Detection Accuracy</span>
-            <ShieldCheck size={16} className="text-purple-500" />
-          </div>
-          <div className="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono">
-            {accuracy}
-          </div>
-          <div className="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5">CNN Model Confidence</div>
-        </div>
-      </div>
-
-      {/* 3. Contaminant Classes Breakdown & Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search bar */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          <div className="md:col-span-5 flex items-center gap-2">
+            <label className="text-xs font-semibold app-muted whitespace-nowrap">Camera IP:</label>
             <input
               type="text"
-              placeholder="Search detection logs by class, purifier code or location..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              value={cameraIp}
+              onChange={(e) => setCameraIp(e.target.value)}
+              placeholder="e.g. 192.168.4.1 or 192.168.43.50"
+              className="app-input text-xs font-mono py-1.5 px-3 flex-1"
             />
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <select
-              value={filterClass}
-              onChange={(e) => setFilterClass(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+          <div className="md:col-span-7 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => handleConnectCamera()}
+              disabled={isConnecting}
+              className="primary-button text-xs py-1.5 px-3.5 flex items-center gap-1.5"
             >
-              <option value="ALL">All Contaminant Classes</option>
-              <option value="Clean Water">Clean Water</option>
-              <option value="Algae">Algae</option>
-              <option value="Insect">Insect</option>
-              <option value="Worm">Worm</option>
-              <option value="Unknown Contaminant">Unknown Contaminant</option>
-            </select>
+              <RefreshCw size={13} className={isConnecting ? 'animate-spin' : ''} />
+              <span>{isConnecting ? 'Connecting...' : 'Connect Camera'}</span>
+            </button>
 
-            <select
-              value={filterRisk}
-              onChange={(e) => setFilterRisk(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+            <button
+              onClick={() => handleConnectCamera('192.168.4.1')}
+              disabled={isConnecting}
+              className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
+              title="Quick connect to default ESP32-CAM AP address"
             >
-              <option value="ALL">All Risk Levels</option>
-              <option value="SAFE">Safe</option>
-              <option value="WARNING">Warning</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
+              <span>192.168.4.1 (AP Mode)</span>
+            </button>
 
-            {(search || filterClass !== 'ALL' || filterRisk !== 'ALL') && (
-              <button
-                onClick={() => {
-                  setSearch('');
-                  setFilterClass('ALL');
-                  setFilterRisk('ALL');
-                }}
-                className="p-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                title="Reset Filters"
-              >
-                <RotateCcw size={14} />
-              </button>
+            <button
+              onClick={handleAutoDiscover}
+              disabled={isDiscovering}
+              className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1.5"
+            >
+              <Search size={13} className={isDiscovering ? 'animate-spin text-sky-500' : ''} />
+              <span>{isDiscovering ? 'Scanning...' : 'Auto-Discover'}</span>
+            </button>
+
+            <button
+              onClick={() => setUseDirectStream(!useDirectStream)}
+              className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
+                useDirectStream
+                  ? 'border-sky-500 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-bold'
+                  : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+              }`}
+              title="Toggle Direct Device MJPEG stream vs Backend Proxy"
+            >
+              {useDirectStream ? 'Direct Device Stream' : 'Backend Proxy Stream'}
+            </button>
+          </div>
+        </div>
+
+        {connectMessage && (
+          <div className="text-[11px] font-mono px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 flex items-center gap-2 animate-in fade-in">
+            <Radio size={12} className="text-sky-500 animate-pulse" />
+            <span>{connectMessage}</span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Top Banner: Live Camera Optical Inspection & Quick Scan Station */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Live Stream / Camera View Card */}
+        <div className="lg:col-span-2 app-card p-5 space-y-3">
+          <div className="flex items-center justify-between border-b app-divider pb-2.5">
+            <div className="flex items-center gap-2">
+              <Camera size={16} className="text-sky-600 dark:text-sky-400" />
+              <h3 className="text-sm font-bold app-heading">ESP32-CAM Live Optical Inspection Feed</h3>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">Target: WP-1 (EMTech 2nd Floor)</span>
+          </div>
+
+          <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center shadow-inner group">
+            {isCameraOnline ? (
+              <>
+                {/* Live MJPEG Stream Element */}
+                <img
+                  key={`stream-${streamKey}-${useDirectStream}`}
+                  src={streamSrc}
+                  alt="Live ESP32-CAM Optical Stream"
+                  onLoad={() => setIsStreamStalled(false)}
+                  onError={() => {
+                    setIsStreamStalled(true);
+                  }}
+                  className="w-full h-full object-contain bg-black"
+                />
+
+                {/* Stalled Recovery Overlay */}
+                {isStreamStalled && (
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+                    <div className="bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg">
+                      <Loader2 size={13} className="animate-spin text-amber-400" />
+                      <span>Synchronizing live feed...</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Overlay HUD */}
+                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5 pointer-events-none">
+                  <Radio size={11} className="text-rose-500 animate-pulse" />
+                  <span className="font-bold text-rose-400">LIVE FEED</span>
+                  <span className="text-white/40">|</span>
+                  <span>640x480 VGA</span>
+                  <span className="text-white/40">|</span>
+                  <span className="text-sky-400 font-semibold">{cameraIp}</span>
+                </div>
+
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-1 pointer-events-none">
+                  <ShieldCheck size={12} />
+                  <span>Optical Sensor Active</span>
+                </div>
+
+                {/* Bottom Overlay HUD */}
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                  <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
+                    Endpoint: <code className="text-sky-300">{useDirectStream ? `http://${cameraIp}/stream` : '/api/camera/stream'}</code>
+                  </div>
+                  <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-400">
+                    {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Offline Guidance Display */
+              <div className="p-6 text-center text-slate-400 space-y-3 max-w-md">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                  <Camera size={26} className="text-sky-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">ESP32-CAM Ready to Connect</div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Connect your computer to Wi-Fi <strong>AquaPure-CAM</strong> (or local hotspot) and click Connect below.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <button
+                    onClick={() => handleConnectCamera('192.168.4.1')}
+                    disabled={isConnecting}
+                    className="primary-button text-xs py-1.5 px-3.5 flex items-center gap-1.5 shadow-md"
+                  >
+                    <RefreshCw size={12} className={isConnecting ? 'animate-spin' : ''} />
+                    <span>Connect to 192.168.4.1</span>
+                  </button>
+
+                  <button
+                    onClick={handleAutoDiscover}
+                    disabled={isDiscovering}
+                    className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
+                  >
+                    <Search size={12} />
+                    <span>Auto-Discover</span>
+                  </button>
+                </div>
+              </div>
             )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedPurifierId}
+                onChange={(e) => setSelectedPurifierId(e.target.value)}
+                className="app-input text-xs font-semibold py-1.5 px-3"
+              >
+                {purifiers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.purifierCode} &mdash; {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefreshStream}
+                className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
+                title="Refresh live video stream"
+              >
+                <RefreshCw size={13} />
+                <span>Refresh</span>
+              </button>
+
+              <button
+                onClick={() => handleRunScan()}
+                disabled={isScanning}
+                className="primary-button text-xs py-1.5 px-4 flex items-center gap-1.5 shadow-md"
+              >
+                <ScanEye size={14} className={isScanning ? 'animate-spin' : ''} />
+                <span>{isScanning ? 'Analyzing Optical Clarity...' : 'Capture & Run AI Vision Scan'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Optical Audit Summary */}
+        <div className="space-y-3">
+          <div className="app-card p-4 space-y-2">
+            <span className="text-[11px] app-muted block font-medium">Total AI Optical Scans</span>
+            <span className="text-2xl font-bold font-mono app-heading">{totalScans}</span>
+          </div>
+
+          <div className="app-card p-4 space-y-2 border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20">
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block font-bold">Clean Water Baseline</span>
+            <span className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">{safePurityScans}</span>
+          </div>
+
+          <div className="app-card p-4 space-y-2 border-rose-500/30 bg-rose-50/40 dark:bg-rose-950/20">
+            <span className="text-[11px] text-rose-700 dark:text-rose-400 block font-bold">Contaminant Alerts</span>
+            <span className="text-2xl font-bold font-mono text-rose-700 dark:text-rose-400">{criticalContaminants + warnings}</span>
+          </div>
+
+          <div className="app-card p-4 space-y-2 text-xs">
+            <div className="font-bold app-heading flex items-center gap-1.5">
+              <Sparkles size={13} className="text-sky-500" />
+              <span>Supported Vision Classes</span>
+            </div>
+            <ul className="text-[11px] app-muted space-y-1 list-disc list-inside">
+              <li>Clean Potable Baseline (100% Clarity)</li>
+              <li>Micro-Algae Bloom Filament</li>
+              <li>Insect & Micro-Debris Particulate</li>
+              <li>Microscopic Nematode Larvae</li>
+            </ul>
           </div>
         </div>
       </div>
 
-      {/* 4. Detection History Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              AI Vision Detection Logs
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Live automated frames analyzed by the edge neural network.
-            </p>
-          </div>
-          <span className="text-xs font-mono text-slate-400">
-            {filtered.length} log entries
-          </span>
+      {/* 4. Filter & Search Controls */}
+      <div className="app-card p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-72">
+          <Search size={14} className="absolute left-3 top-2.5 app-muted" />
+          <input
+            type="text"
+            placeholder="Search contaminant class or unit..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="app-input pl-9 text-xs w-full py-1.5"
+          />
         </div>
 
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select
+            value={filterRisk}
+            onChange={(e) => setFilterRisk(e.target.value)}
+            className="app-input text-xs font-semibold py-1.5 px-3 flex-1 sm:flex-initial"
+          >
+            <option value="ALL">All Risk Levels</option>
+            <option value="SAFE">Safe / Clean</option>
+            <option value="WARNING">Warning</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 5. Inspection History Log Table */}
+      <div className="app-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
+            <thead className="border-b app-divider bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="py-3 px-4">Date & Time</th>
                 <th className="py-3 px-4">Purifier Unit</th>
                 <th className="py-3 px-4">Captured Image</th>
                 <th className="py-3 px-4">Detected Object</th>
-                <th className="py-3 px-4 font-mono">Confidence</th>
+                <th className="py-3 px-4">Confidence</th>
                 <th className="py-3 px-4">Risk Level</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
-              {filtered.map((d) => {
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredDetections.map((d) => {
                 const isSafe = d.riskLevel === 'SAFE';
                 const isWarn = d.riskLevel === 'WARNING';
                 const isCrit = d.riskLevel === 'CRITICAL';
@@ -276,10 +541,13 @@ export const AiDetectionPage: React.FC = () => {
                   <tr
                     key={d.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedDetection(d)}
+                    onClick={() => {
+                      setSelectedDetection(d);
+                      setViewMode('SNAPSHOT');
+                    }}
                   >
-                    <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-300">
-                      <div>
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-900 dark:text-white">
                         {new Date(d.timestamp).toLocaleDateString([], {
                           month: 'short',
                           day: 'numeric',
@@ -293,40 +561,44 @@ export const AiDetectionPage: React.FC = () => {
                         })}
                       </div>
                     </td>
+
                     <td className="py-3.5 px-4">
                       <div className="font-mono font-bold text-sky-600 dark:text-sky-400">
-                        {d.purifier?.purifierCode || 'WP-001'}
+                        {d.purifier?.purifierCode || 'WP-1'}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400">
                         {d.purifier?.name || 'Purifier Station'}
                       </div>
                     </td>
+
+                    {/* Captured Image Thumbnail */}
                     <td className="py-3.5 px-4">
-                      {/* Synthetic Camera Thumbnail */}
-                      <div className="h-12 w-16 rounded-lg bg-slate-900 relative overflow-hidden border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 group">
-                        <div
-                          className={`absolute inset-0 opacity-40 ${
-                            d.detectedObject === 'Algae'
-                              ? 'bg-emerald-800'
-                              : d.detectedObject === 'Worm' || d.detectedObject === 'Insect'
-                              ? 'bg-amber-900'
-                              : 'bg-sky-800'
-                          }`}
+                      <div className="h-12 w-16 rounded-lg bg-slate-900 relative overflow-hidden border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 group shadow-xs">
+                        <img
+                          src={d.capturedImageUrl || `/api/camera/snapshot-image/${d.id}`}
+                          alt={d.detectedObject}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                          className="w-full h-full object-cover"
                         />
-                        <Camera size={14} className="z-10 text-white opacity-80" />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                         {d.boundingBoxes && d.boundingBoxes.length > 0 && (
-                          <div className="absolute inset-1 border border-dashed border-rose-400 rounded" />
+                          <div className="absolute inset-1 border border-dashed border-rose-500 rounded pointer-events-none" />
                         )}
                       </div>
                     </td>
+
                     <td className="py-3.5 px-4">
                       <span className="font-bold text-slate-900 dark:text-white">
                         {d.detectedObject}
                       </span>
                     </td>
+
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">
                       {d.confidence.toFixed(1)}%
                     </td>
+
                     <td className="py-3.5 px-4">
                       <span
                         className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -340,11 +612,13 @@ export const AiDetectionPage: React.FC = () => {
                         {d.riskLevel}
                       </span>
                     </td>
+
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedDetection(d);
+                          setViewMode('SNAPSHOT');
                         }}
                         className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
                       >
@@ -360,10 +634,11 @@ export const AiDetectionPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. View Details Modal with AI Bounding Box Overlay */}
+      {/* 6. View Details Modal with Real Captured Frame & Live Feed Toggle */}
       {selectedDetection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+            {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <ScanEye size={18} className="text-sky-600 dark:text-sky-400" />
@@ -371,55 +646,108 @@ export const AiDetectionPage: React.FC = () => {
                   AI Optical Contaminant Inspection Detail
                 </h3>
               </div>
+
+              {/* View Switcher Pill */}
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
+                <button
+                  onClick={() => setViewMode('SNAPSHOT')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                    viewMode === 'SNAPSHOT'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Captured Frame
+                </button>
+                <button
+                  onClick={() => setViewMode('LIVE')}
+                  className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition-all ${
+                    viewMode === 'LIVE'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  {isCameraOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  Live Camera
+                </button>
+              </div>
+
               <button
                 onClick={() => setSelectedDetection(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white ml-2"
               >
                 <X size={18} />
               </button>
             </div>
 
             <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-              {/* Bounding Box Image Preview Canvas */}
+              {/* High-Res Image Canvas */}
               <div className="relative w-full aspect-video rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shadow-inner">
-                {/* Visual Water Tank Simulation Grid */}
-                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]" />
-
-                {/* Background Water Tint */}
-                <div
-                  className={`absolute inset-0 opacity-40 ${
-                    selectedDetection.detectedObject === 'Algae'
-                      ? 'bg-emerald-950'
-                      : selectedDetection.detectedObject === 'Worm' || selectedDetection.detectedObject === 'Insect'
-                      ? 'bg-amber-950'
-                      : 'bg-sky-950'
-                  }`}
-                />
-
-                {/* Bounding Box Visual Overlay */}
-                {selectedDetection.boundingBoxes && selectedDetection.boundingBoxes.length > 0 ? (
-                  <div className="relative z-10 w-4/5 h-4/5 flex items-center justify-center">
-                    <div className="relative border-2 border-rose-500 bg-rose-500/10 rounded-lg p-3 w-48 h-36 flex flex-col justify-between shadow-lg shadow-rose-500/20 animate-pulse">
-                      <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded self-start shadow-xs">
-                        {selectedDetection.detectedObject} ({selectedDetection.confidence}%)
-                      </span>
-                      <span className="text-[9px] font-mono text-rose-300 self-end">
-                        [ROI: 140, 110, 180, 140]
-                      </span>
+                {viewMode === 'LIVE' ? (
+                  isCameraOnline ? (
+                    <>
+                      <img
+                        key={`modal-stream-${streamKey}-${useDirectStream}`}
+                        src={streamSrc}
+                        alt="ESP32-CAM Live Feed"
+                        className="w-full h-full object-contain bg-black"
+                      />
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5">
+                        <Radio size={11} className="text-rose-500 animate-pulse" />
+                        <span className="font-bold text-rose-400">LIVE FEED</span>
+                        <span className="text-white/40">|</span>
+                        <span>640x480 VGA</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-6 text-slate-400 space-y-3">
+                      <WifiOff size={28} className="mx-auto text-slate-500" />
+                      <div className="text-xs font-bold text-white">ESP32-CAM Ready to Stream</div>
+                      <p className="text-[11px] text-slate-400 max-w-sm">
+                        Connect to Wi-Fi <strong>AquaPure-CAM</strong> (or your hotspot) to activate live stream.
+                      </p>
+                      <button
+                        onClick={() => handleConnectCamera('192.168.4.1')}
+                        className="primary-button text-xs py-1.5 px-3"
+                      >
+                        Connect to 192.168.4.1
+                      </button>
                     </div>
-                  </div>
+                  )
                 ) : (
-                  <div className="relative z-10 text-center text-emerald-400 space-y-1">
-                    <CheckCircle2 size={36} className="mx-auto text-emerald-400 mb-2" />
-                    <span className="text-sm font-bold block">No Biological Contaminants Detected</span>
-                    <span className="text-xs text-slate-400">100% Optical Purity Baseline</span>
-                  </div>
+                  /* Captured Snapshot View */
+                  <>
+                    <img
+                      src={selectedDetection.capturedImageUrl || `/api/camera/snapshot-image/${selectedDetection.id}`}
+                      alt={selectedDetection.detectedObject}
+                      className="w-full h-full object-contain bg-black"
+                    />
+
+                    {/* AI Bounding Box Overlay if Detected */}
+                    {selectedDetection.boundingBoxes && selectedDetection.boundingBoxes.length > 0 ? (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="relative border-2 border-rose-500 bg-rose-500/15 rounded-lg p-3 w-56 h-40 flex flex-col justify-between shadow-xl shadow-rose-500/30 animate-pulse">
+                          <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded self-start shadow-xs">
+                            {selectedDetection.detectedObject} ({selectedDetection.confidence.toFixed(1)}%)
+                          </span>
+                          <span className="text-[9px] font-mono text-rose-300 self-end">
+                            [ROI: Active Focal Window]
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="absolute bottom-3 left-3 z-10 bg-emerald-950/80 backdrop-blur-md border border-emerald-700/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                        <CheckCircle2 size={16} />
+                        <span>Optical Clarity Verified (100% Purity Baseline)</span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Top overlay badge */}
                 <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
                   <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-slate-700">
-                    Resolution: 1600x1200 UXGA
+                    Resolution: 640x480 VGA
                   </span>
                   <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-sky-400 border border-slate-700">
                     ESP32-CAM OV2640
@@ -461,7 +789,7 @@ export const AiDetectionPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                   <span className="text-[10px] text-slate-400 block">Purifier Node</span>
                   <span className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    {selectedDetection.purifier?.purifierCode || 'WP-001'}
+                    {selectedDetection.purifier?.purifierCode || 'WP-1'}
                   </span>
                 </div>
               </div>
@@ -489,7 +817,16 @@ export const AiDetectionPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+              <button
+                onClick={() => handleRunScan()}
+                disabled={isScanning}
+                className="secondary-button text-xs py-2 px-3 flex items-center gap-1.5"
+              >
+                <ScanEye size={13} className={isScanning ? 'animate-spin' : ''} />
+                <span>Run New Scan</span>
+              </button>
+
               <button
                 onClick={() => setSelectedDetection(null)}
                 className="px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold"
@@ -497,108 +834,6 @@ export const AiDetectionPage: React.FC = () => {
                 Close Details
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Run AI Scan Modal */}
-      {isScanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Camera size={16} className="text-sky-600 dark:text-sky-400" />
-                Run AI Vision Contaminant Scan
-              </h3>
-              <button
-                onClick={() => setIsScanModalOpen(false)}
-                className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            {scanResult ? (
-              <div className="space-y-4 text-xs animate-in fade-in">
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      Scan Completed: {scanResult.detectedObject}
-                    </span>
-                    <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
-                      {scanResult.confidence}%
-                    </span>
-                  </div>
-                  <p className="text-slate-500 dark:text-slate-400">{scanResult.recommendation}</p>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setScanResult(null);
-                      setIsScanModalOpen(false);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleRunScan} className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Select Purifier Node
-                  </label>
-                  <select
-                    value={scanPurifierId}
-                    onChange={(e) => setScanPurifierId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  >
-                    {purifiers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.purifierCode} - {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Inspection Specimen Simulation
-                  </label>
-                  <select
-                    value={scanSampleType}
-                    onChange={(e) => setScanSampleType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  >
-                    <option value="Clean Water">Clean Water (Nominal Pure)</option>
-                    <option value="Algae">Micro-Algae Filament Cluster</option>
-                    <option value="Insect">Insect / Gnat Particulate</option>
-                    <option value="Worm">Nematode / Larvae Specimen</option>
-                    <option value="Unknown Contaminant">Unclassified Particulate Aggregate</option>
-                  </select>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsScanModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isScanning}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold flex items-center gap-1.5"
-                  >
-                    {isScanning && <RefreshCw size={13} className="animate-spin" />}
-                    <span>{isScanning ? 'Processing Frame...' : 'Trigger Inspection'}</span>
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

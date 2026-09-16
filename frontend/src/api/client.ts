@@ -1,10 +1,11 @@
 import axios from 'axios';
 import {
-  DashboardOverview,
   Purifier,
+  DashboardOverview,
   AlertItem,
-  MaintenanceRecordItem,
   PredictionInfo,
+  TelemetryReading,
+  MaintenanceRecordItem,
   DeviceInfo,
   CameraDeviceInfo,
   SimulationScenario,
@@ -17,34 +18,67 @@ const API_BASE = '/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('smart_water_token');
+  const token = localStorage.getItem('aquapure_auth_token') || localStorage.getItem('smart_water_token') || sessionStorage.getItem('smart_water_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+      localStorage.removeItem('smart_water_token');
+      localStorage.removeItem('smart_water_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const api = {
-  // Auth
-  login: async (email: string, password: string) => {
-    const res = await apiClient.post('/auth/login', { email, password });
+  // Authentication
+  login: async (credentialsOrEmail: any, password?: string) => {
+    const payload = typeof credentialsOrEmail === 'string'
+      ? { email: credentialsOrEmail, password }
+      : credentialsOrEmail;
+    const res = await apiClient.post('/auth/login', payload);
+    return res.data;
+  },
+  signup: async (data: any) => {
+    const res = await apiClient.post('/auth/signup', data);
     return res.data;
   },
   getMe: async () => {
     const res = await apiClient.get('/auth/me');
-    return res.data.user;
+    return res.data;
   },
-
-  // Dashboard Overview
-  getDashboardOverview: async (): Promise<DashboardOverview> => {
-    const res = await apiClient.get('/dashboard/overview');
+  sendOtp: async (email: string, purpose = 'LOGIN') => {
+    const res = await apiClient.post('/auth/send-otp', { email, purpose });
+    return res.data;
+  },
+  verifyOtp: async (email: string, otp: string) => {
+    const res = await apiClient.post('/auth/verify-otp', { email, otp });
+    return res.data;
+  },
+  resetPassword: async (data: { email: string; otp: string; newPassword: string }) => {
+    const res = await apiClient.post('/auth/reset-password', data);
+    return res.data;
+  },
+  updateProfile: async (data: { name?: string; organizationName?: string }) => {
+    const res = await apiClient.put('/auth/profile', data);
+    return res.data;
+  },
+  changePassword: async (data: { currentPassword?: string; newPassword: string }) => {
+    const res = await apiClient.post('/auth/change-password', data);
     return res.data;
   },
 
@@ -57,12 +91,38 @@ export const api = {
     const res = await apiClient.get(`/purifiers/${id}`);
     return res.data;
   },
-  getPurifierReadings: async (id: string, timeframe: '24h' | '7d' | '30d' = '24h') => {
+  getPurifierReadings: async (id: string, timeframe = '24h'): Promise<any[]> => {
     const res = await apiClient.get(`/purifiers/${id}/readings?timeframe=${timeframe}`);
     return res.data;
   },
 
-  // Simulation Controls & IoT Ingestion
+  // Dashboard Overview
+  getDashboardOverview: async (): Promise<DashboardOverview> => {
+    const res = await apiClient.get('/dashboard/overview');
+    return res.data;
+  },
+
+  // Telemetry Ingestion (Pico W / IoT Hardware)
+  ingestTelemetry: async (reading: {
+    deviceId: string;
+    purifierCode: string;
+    ph: number;
+    tds: number;
+    turbidity: number;
+    temperature: number;
+    flowRate?: number;
+    waterLevel?: number;
+    timestamp?: string;
+  }) => {
+    const res = await apiClient.post('/iot/sensor-data', reading);
+    return res.data;
+  },
+  ingestPicoWReading: async (reading: any) => {
+    const res = await apiClient.post('/devices/readings', reading);
+    return res.data;
+  },
+
+  // Simulation Controls
   triggerScenario: async (purifierId: string, scenario: SimulationScenario) => {
     const res = await apiClient.post('/simulation/scenario', { purifierId, scenario });
     return res.data;
@@ -71,32 +131,18 @@ export const api = {
     const res = await apiClient.post('/simulation/reset', { purifierId });
     return res.data;
   },
-  ingestPicoWReading: async (payload: {
-    deviceId?: string;
-    purifierCode?: string;
-    purifier_id?: string;
-    ph: number;
-    tds: number;
-    turbidity: number;
-    temperature: number;
-    flowRate?: number;
-    water_level?: number;
-  }) => {
-    const res = await apiClient.post('/iot/sensor-data', payload);
-    return res.data;
-  },
 
-  // Predictions / ML
+  // Predictions
   getPredictions: async (): Promise<PredictionInfo[]> => {
     const res = await apiClient.get('/predictions');
     return res.data;
   },
-  getPredictionsByPurifier: async (purifierId: string): Promise<PredictionInfo> => {
+  getPredictionsByPurifier: async (purifierId: string): Promise<PredictionInfo[]> => {
     const res = await apiClient.get(`/predictions/${purifierId}`);
     return res.data;
   },
 
-  // AI Contaminant Vision Detections
+  // AI Contaminant Vision
   getAiDetections: async (): Promise<AiDetectionItem[]> => {
     const res = await apiClient.get('/ai-detections');
     return res.data;
@@ -128,7 +174,7 @@ export const api = {
   scheduleMaintenance: async (data: {
     purifierId: string;
     type: string;
-    technician: string;
+    technician?: string;
     date?: string;
     scheduledDate?: string;
     issue?: string;
@@ -185,9 +231,30 @@ export const api = {
     return res.data;
   },
 
-  // Camera
+  // Camera & ESP32-CAM Gateway
   getCameras: async (): Promise<CameraDeviceInfo[]> => {
     const res = await apiClient.get('/camera');
+    return res.data;
+  },
+  getCameraStatus: async (deviceId = 'ESP32-CAM-1'): Promise<{
+    deviceId: string;
+    purifierCode: string;
+    isOnline: boolean;
+    status: 'ONLINE' | 'OFFLINE';
+    streamUrl: string;
+    resolution: string;
+    lastSeen: string;
+    opticalInspectionStatus: string;
+  }> => {
+    const res = await apiClient.get(`/camera/status/${deviceId}`);
+    return res.data;
+  },
+  updateCameraConfig: async (data: { deviceId?: string; ipAddress?: string; streamUrl?: string; resolution?: string }) => {
+    const res = await apiClient.post('/camera/config', data);
+    return res.data;
+  },
+  autoDiscoverCamera: async () => {
+    const res = await apiClient.post('/camera/auto-discover');
     return res.data;
   },
   captureCameraSnapshot: async (deviceId: string) => {

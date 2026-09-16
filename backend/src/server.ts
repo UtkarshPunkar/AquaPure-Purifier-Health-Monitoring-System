@@ -17,7 +17,7 @@ const io = new Server(server, {
 setupSocketHandlers(io);
 simulationEngine.setSocketServer(io);
 
-server.listen(ENV.PORT, async () => {
-  console.log(`🚀 Smart Water Backend Server running on http://localhost:${ENV.PORT}`);
+server.listen(ENV.PORT, '0.0.0.0', async () => {
+  console.log(`🚀 Smart Water Backend Server running on http://0.0.0.0:${ENV.PORT} (Accessible via LAN/Hotspot)`);
   await simulationEngine.initialize();
 });

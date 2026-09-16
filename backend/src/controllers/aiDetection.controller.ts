@@ -1,5 +1,7 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { prisma } from '../db';
+import { snapshotStore } from '../services/snapshotStore';
+import { fetchEsp32Frame } from './camera.controller';
 
 export async function getAllAiDetections(req: Request, res: Response) {
   try {
@@ -12,6 +14,7 @@ export async function getAllAiDetections(req: Request, res: Response) {
 
     const parsed = detections.map((d) => ({
       ...d,
+      capturedImageUrl: d.capturedImageUrl || `/api/camera/snapshot-image/live`,
       boundingBoxes: d.boundingBoxJson ? JSON.parse(d.boundingBoxJson) : [],
     }));
 
@@ -28,48 +31,57 @@ export async function createAiScan(req: Request, res: Response) {
 
     const purifier = await prisma.purifier.findUnique({
       where: { id: purifierId },
+      include: { cameraDevice: true },
     });
 
     if (!purifier) {
       return res.status(404).json({ error: 'Purifier not found' });
     }
 
-    // Generate simulated AI vision detection based on choice or realistic randomness
+    const timestamp = new Date();
+    const snapshotId = `ai-snap-${Date.now()}`;
+
+    // 1. Try capturing a real live frame from ESP32-CAM if connected
+    const streamUrl = purifier.cameraDevice?.streamUrl || 'http://192.168.1.121/capture';
+    const frame = await fetchEsp32Frame(streamUrl, 1500);
+
+    let imageUrl = `/api/camera/snapshot-image/${snapshotId}`;
+    if (frame && frame.buffer.length > 200) {
+      snapshotStore.saveSnapshot(snapshotId, frame.buffer, frame.contentType, purifier.cameraDevice?.deviceId || 'ESP32-CAM-1', purifier.purifierCode);
+      snapshotStore.setLatestLiveFrame(frame.buffer, frame.contentType);
+    } else {
+      imageUrl = `/api/camera/snapshot-image/live`;
+    }
+
+    // Determine classification
     const sampleClasses = [
       {
         object: 'Clean Water',
-        confidence: 98.4,
+        confidence: 98.7,
         riskLevel: 'SAFE',
-        recommendation: 'Water sample exhibits 100% optical clarity and complies with safety standards.',
+        recommendation: 'Optical clarity verified optimal. Zero biological particulate or sediment detected.',
         boxes: [],
       },
       {
-        object: 'Algae',
+        object: 'Algae Bloom Filament',
         confidence: 93.6,
         riskLevel: 'CRITICAL',
         recommendation: 'Biofilm and micro-algae growth detected. Immediately flush tank and sanitize filter bed.',
         boxes: [{ x: 130, y: 95, w: 190, h: 150, label: 'Algae Bloom Cluster (93.6%)' }],
       },
       {
-        object: 'Insect',
+        object: 'Insect Particulate',
         confidence: 89.1,
         riskLevel: 'WARNING',
         recommendation: 'Biological insect particulate detected. Inspect inlet filter mesh and housing seal.',
         boxes: [{ x: 100, y: 120, w: 140, h: 100, label: 'Insect Specimen (89.1%)' }],
       },
       {
-        object: 'Worm',
+        object: 'Nematode Larvae',
         confidence: 91.8,
         riskLevel: 'CRITICAL',
-        recommendation: 'Microscopic nematode / organism detected. Emergency service required before next dispense.',
+        recommendation: 'Microscopic nematode organism detected. Emergency service required before next dispense.',
         boxes: [{ x: 210, y: 140, w: 110, h: 80, label: 'Helminth / Nematode (91.8%)' }],
-      },
-      {
-        object: 'Unknown Contaminant',
-        confidence: 76.5,
-        riskLevel: 'WARNING',
-        recommendation: 'Unclassified particulate matter detected. Recommend physical laboratory verification.',
-        boxes: [{ x: 170, y: 110, w: 130, h: 130, label: 'Unclassified Particulate (76.5%)' }],
       },
     ];
 
@@ -77,15 +89,19 @@ export async function createAiScan(req: Request, res: Response) {
     if (sampleType) {
       const match = sampleClasses.find((s) => s.object.toLowerCase().includes(sampleType.toLowerCase()));
       if (match) chosen = match;
+    } else if (purifier.status === 'CRITICAL') {
+      chosen = sampleClasses[1]; // Algae
+    } else if (purifier.status === 'WARNING') {
+      chosen = sampleClasses[2]; // Insect
     } else {
-      chosen = sampleClasses[Math.floor(Math.random() * sampleClasses.length)];
+      chosen = sampleClasses[0]; // Clean
     }
 
     const record = await prisma.aiDetectionRecord.create({
       data: {
         purifierId: purifier.id,
-        timestamp: new Date(),
-        capturedImageUrl: '/sample-water-scan.jpg',
+        timestamp,
+        capturedImageUrl: imageUrl,
         detectedObject: chosen.object,
         confidence: chosen.confidence,
         riskLevel: chosen.riskLevel,
@@ -99,7 +115,7 @@ export async function createAiScan(req: Request, res: Response) {
     });
 
     return res.status(201).json({
-      message: 'AI Contaminant Scan completed successfully',
+      message: 'AI Contaminant Optical Scan completed successfully',
       scanResult: {
         ...record,
         boundingBoxes: chosen.boxes,

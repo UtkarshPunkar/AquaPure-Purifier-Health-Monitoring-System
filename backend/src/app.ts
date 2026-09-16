@@ -10,7 +10,8 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.raw({ type: ['image/*', 'application/octet-stream'], limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

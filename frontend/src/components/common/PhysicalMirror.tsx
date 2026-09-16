@@ -1,6 +1,6 @@
 import React from 'react';
 import { DeviceInfo, TelemetryReading } from '../../types';
-import { Cpu, Wifi, Volume2, AlertCircle } from 'lucide-react';
+import { Cpu, Volume2, AlertCircle, CheckCircle2, AlertTriangle, ShieldAlert, Activity } from 'lucide-react';
 
 interface PhysicalMirrorProps {
   device?: DeviceInfo;
@@ -11,145 +11,172 @@ interface PhysicalMirrorProps {
 
 export const PhysicalMirror: React.FC<PhysicalMirrorProps> = ({
   device,
-  telemetry,
   purifierCode = 'PUR-001',
-  isPhysicalHardware = true,
 }) => {
-  const led = device?.ledStatus || 'GREEN_NORMAL';
-  const buzzer = device?.buzzerStatus ?? false;
-  const isGreen = led === 'GREEN_NORMAL';
-  const isYellow = led === 'YELLOW_WARNING';
-  const isRed = led === 'RED_CRITICAL';
-
-  const oledText1 = purifierCode ? `${purifierCode} RETROFIT` : 'PICO-W RETROFIT';
-  const oledText2 = telemetry
-    ? `TDS:${telemetry.tds.toFixed(0)} pH:${telemetry.ph.toFixed(1)}`
-    : 'INITIALIZING...';
-  const oledText3 = telemetry
-    ? `TURB:${telemetry.turbidity.toFixed(2)} FL:${telemetry.flowRate.toFixed(1)}L`
-    : 'STANDBY';
-  const oledText4 = telemetry
-    ? `WQI:${telemetry.wqiScore.toFixed(0)} [${telemetry.wqiStatus.slice(0, 4)}]`
-    : 'AWAITING LINK';
+  const isInactive = device?.status === 'INACTIVE' || device?.status === 'OFFLINE';
+  const led = isInactive ? 'OFF' : (device?.ledStatus || 'GREEN_NORMAL');
+  const buzzer = isInactive ? false : (device?.buzzerStatus ?? false);
+  const isGreen = !isInactive && led === 'GREEN_NORMAL';
+  const isYellow = !isInactive && led === 'YELLOW_WARNING';
+  const isRed = !isInactive && led === 'RED_CRITICAL';
 
   return (
-    <div className="app-card p-5">
+    <div className="app-card p-5 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b app-divider pb-3 mb-4">
+      <div className="flex items-center justify-between border-b app-divider pb-3.5">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/60 text-sky-600 dark:text-sky-400">
+          <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/60 text-sky-600 dark:text-sky-400 shrink-0">
             <Cpu size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold app-heading flex items-center gap-2">
+            <h3 className="text-sm font-bold app-heading flex items-center gap-2">
               Physical Microcontroller Twin
-              {isPhysicalHardware && (
-                <span className="text-[10px] px-2 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300 font-mono font-medium">
-                  Raspberry Pi Pico W
-                </span>
-              )}
+              <span className="font-mono text-xs text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/80 px-2 py-0.5 rounded-md border border-sky-200/80 dark:border-sky-800/80">
+                {purifierCode}
+              </span>
             </h3>
-            <p className="text-xs app-muted font-mono">
-              Device: {device?.deviceId || 'PICO-W-001'} • Firmware: {device?.firmwareVersion || 'v2.4.1'}
-            </p>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-2 text-xs font-mono app-muted app-soft px-2.5 py-1 rounded-lg">
-          <Wifi size={14} className={device?.status === 'ONLINE' ? 'text-emerald-500' : 'text-slate-400'} />
-          <span>{device?.wifiRssi ? `${device.wifiRssi} dBm` : '-55 dBm'}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-        {/* SSD1306 128x64 OLED Twin Screen */}
-        <div className="bg-slate-950 rounded-xl p-3.5 border border-slate-800 shadow-inner font-mono text-cyan-300">
-          <div className="flex justify-between items-center text-[10px] text-cyan-500 border-b border-slate-800 pb-1 mb-2 font-medium">
-            <span>SSD1306 0.96&quot; OLED</span>
-            <span className="bg-cyan-950 text-cyan-400 px-1.5 py-0.2 rounded text-[9px]">ONLINE</span>
+      {/* Wide Diagnostic Status Panel */}
+      <div className="app-card-subtle p-4 sm:p-5 rounded-2xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+          <div className="flex items-center gap-2">
+            <Activity size={15} className="text-sky-500" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+              Diagnostic Status Panel
+            </h4>
           </div>
-          <div className="space-y-1 text-xs">
-            <div className="text-cyan-100 font-bold tracking-wide">
-              {oledText1}
-            </div>
-            <div className="text-cyan-200 font-medium">
-              {oledText2}
-            </div>
-            <div className="text-cyan-300">
-              {oledText3}
-            </div>
-            <div className="text-cyan-400 font-semibold pt-1 border-t border-slate-800/80 flex justify-between">
-              <span>{oledText4}</span>
-              <span className="text-[10px] text-emerald-400">● LIVE</span>
-            </div>
+
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Live Hardware State:</span>
+            {isInactive && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">
+                <Cpu size={12} /> Standby (Inactive)
+              </span>
+            )}
+            {isGreen && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold">
+                <CheckCircle2 size={12} /> Normal
+              </span>
+            )}
+            {isYellow && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px] font-bold animate-pulse">
+                <AlertTriangle size={12} /> Warning Alert
+              </span>
+            )}
+            {isRed && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[11px] font-bold animate-pulse">
+                <ShieldAlert size={12} /> Critical Fault
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Local Hardware Indicators (3 LEDs + Buzzer) */}
-        <div className="app-card-subtle p-3.5 space-y-3">
-          <div className="text-[11px] font-semibold app-muted uppercase tracking-wider">
-            Diagnostic Status Panel
+        {/* 4 Wide Indicator Columns */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Normal Indicator */}
+          <div
+            className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+              isGreen
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500/20 shadow-xs'
+                : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Normal</span>
+              <div
+                className={`w-3.5 h-3.5 rounded-full border transition-all ${
+                  isGreen
+                    ? 'bg-emerald-500 border-emerald-300 shadow-md shadow-emerald-500/50 animate-pulse'
+                    : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600'
+                }`}
+              />
+            </div>
+            <p className="text-[11px] leading-tight font-medium">
+              {isGreen ? 'Telemetry within nominal ranges' : 'Standby'}
+            </p>
           </div>
 
-          <div className="flex items-center justify-around py-1">
-            {/* Green LED */}
-            <div className="flex flex-col items-center space-y-1">
+          {/* Warning Indicator */}
+          <div
+            className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+              isYellow
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-100 ring-1 ring-amber-500/20 shadow-xs'
+                : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Warning</span>
               <div
-                className={`w-5 h-5 rounded-full border transition-colors ${
-                  isGreen
-                    ? 'bg-emerald-500 border-emerald-400'
-                    : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 opacity-40'
-                }`}
-              />
-              <span className="text-[10px] font-mono app-muted">Normal</span>
-            </div>
-
-            {/* Yellow LED */}
-            <div className="flex flex-col items-center space-y-1">
-              <div
-                className={`w-5 h-5 rounded-full border transition-colors ${
+                className={`w-3.5 h-3.5 rounded-full border transition-all ${
                   isYellow
-                    ? 'bg-amber-500 border-amber-400'
-                    : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 opacity-40'
+                    ? 'bg-amber-500 border-amber-300 shadow-md shadow-amber-500/50 animate-pulse'
+                    : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600'
                 }`}
               />
-              <span className="text-[10px] font-mono app-muted">Warning</span>
             </div>
+            <p className="text-[11px] leading-tight font-medium">
+              {isYellow ? 'Threshold variance detected' : 'Inactive'}
+            </p>
+          </div>
 
-            {/* Red LED */}
-            <div className="flex flex-col items-center space-y-1">
+          {/* Critical Indicator */}
+          <div
+            className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+              isRed
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-100 ring-1 ring-rose-500/20 shadow-xs'
+                : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Critical</span>
               <div
-                className={`w-5 h-5 rounded-full border transition-colors ${
+                className={`w-3.5 h-3.5 rounded-full border transition-all ${
                   isRed
-                    ? 'bg-rose-500 border-rose-400'
-                    : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 opacity-40'
+                    ? 'bg-rose-500 border-rose-300 shadow-md shadow-rose-500/50 animate-pulse'
+                    : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600'
                 }`}
               />
-              <span className="text-[10px] font-mono app-muted">Critical</span>
             </div>
+            <p className="text-[11px] leading-tight font-medium">
+              {isRed ? 'Immediate service required' : 'Inactive'}
+            </p>
+          </div>
 
-            {/* Active Buzzer */}
-            <div className="flex flex-col items-center space-y-1">
+          {/* Acoustic Buzzer */}
+          <div
+            className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+              buzzer
+                ? 'bg-rose-500/15 border-rose-500/40 text-rose-900 dark:text-rose-100 ring-1 ring-rose-500/30 shadow-xs'
+                : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Buzzer</span>
               <div
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                   buzzer
-                    ? 'bg-rose-600 border-rose-400 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-400 opacity-40'
+                    ? 'bg-rose-600 border-rose-400 text-white shadow-md shadow-rose-500/50 animate-bounce'
+                    : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600 text-slate-400'
                 }`}
               >
                 <Volume2 size={11} />
               </div>
-              <span className="text-[10px] font-mono app-muted">Buzzer</span>
             </div>
+            <p className="text-[11px] leading-tight font-medium">
+              {buzzer ? 'Acoustic alarm sounding' : 'Muted (Normal)'}
+            </p>
           </div>
-
-          {buzzer && (
-            <div className="flex items-center space-x-1.5 text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 px-2.5 py-1 rounded-md">
-              <AlertCircle size={14} />
-              <span className="font-medium">Acoustic buzzer active (Threshold breach)</span>
-            </div>
-          )}
         </div>
+
+        {buzzer && (
+          <div className="flex items-center space-x-2 text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 p-2.5 rounded-xl animate-pulse">
+            <AlertCircle size={15} className="shrink-0" />
+            <span className="font-semibold">Acoustic buzzer is currently sounding due to safety threshold breach.</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,8 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
   const filter = purifier.filter;
   const isTargetHardware = purifier.isPhysicalHardware;
 
+  const isInactive = purifier.status === 'INACTIVE' || purifier.status === 'OFFLINE';
+
   return (
     <div className="app-card p-5 flex flex-col justify-between group">
       <div>
@@ -24,8 +26,12 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
                 {purifier.purifierCode}
               </span>
               {isTargetHardware && (
-                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <Cpu size={11} /> Pico W
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                  isInactive 
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                    : 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800'
+                }`}>
+                  Pico W
                 </span>
               )}
             </div>
@@ -37,7 +43,7 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
             </p>
           </div>
 
-          <StatusBadge status={purifier.status} size="sm" showPulse />
+          <StatusBadge status={purifier.status} size="sm" showPulse={!isInactive} />
         </div>
 
         {/* Health Scores Bar */}
@@ -45,14 +51,16 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
           <div>
             <div className="flex justify-between text-xs app-muted mb-1">
               <span>Water Quality</span>
-              <span className="font-mono font-semibold app-heading">{telemetry.wqiScore.toFixed(0)}/100</span>
+              <span className="font-mono font-semibold app-heading">
+                {isInactive ? 'Standby' : `${telemetry.wqiScore.toFixed(0)}/100`}
+              </span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
-                  telemetry.wqiScore >= 80 ? 'bg-emerald-500' : telemetry.wqiScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                  isInactive ? 'bg-slate-400' : telemetry.wqiScore >= 80 ? 'bg-emerald-500' : telemetry.wqiScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
                 }`}
-                style={{ width: `${telemetry.wqiScore}%` }}
+                style={{ width: `${isInactive ? 0 : telemetry.wqiScore}%` }}
               />
             </div>
           </div>
@@ -79,15 +87,21 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
         <div className="grid grid-cols-3 gap-2 text-xs font-mono my-3">
           <div className="app-soft p-2 rounded-lg text-center">
             <span className="app-muted text-[10px] block">TDS</span>
-            <span className="font-semibold app-heading">{telemetry.tds.toFixed(0)} <span className="text-[10px] font-normal app-muted">ppm</span></span>
+            <span className="font-semibold app-heading">
+              {isInactive ? '--' : telemetry.tds.toFixed(0)} <span className="text-[10px] font-normal app-muted">{isInactive ? '' : 'ppm'}</span>
+            </span>
           </div>
           <div className="app-soft p-2 rounded-lg text-center">
             <span className="app-muted text-[10px] block">Turbidity</span>
-            <span className="font-semibold app-heading">{telemetry.turbidity.toFixed(2)} <span className="text-[10px] font-normal app-muted">NTU</span></span>
+            <span className="font-semibold app-heading">
+              {isInactive ? '--' : telemetry.turbidity.toFixed(2)} <span className="text-[10px] font-normal app-muted">{isInactive ? '' : 'NTU'}</span>
+            </span>
           </div>
           <div className="app-soft p-2 rounded-lg text-center">
             <span className="app-muted text-[10px] block">Flow Rate</span>
-            <span className="font-semibold app-heading">{telemetry.flowRate.toFixed(2)} <span className="text-[10px] font-normal app-muted">L/m</span></span>
+            <span className="font-semibold app-heading">
+              {isInactive ? '--' : telemetry.flowRate.toFixed(2)} <span className="text-[10px] font-normal app-muted">{isInactive ? '' : 'L/m'}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -95,8 +109,12 @@ export const PurifierCard: React.FC<PurifierCardProps> = ({ purifier }) => {
       {/* Footer */}
       <div className="pt-3 border-t app-divider flex items-center justify-between mt-1">
         <div className="text-[11px] app-muted flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>Live telemetry</span>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${isInactive ? 'bg-slate-400' : 'bg-emerald-500 animate-pulse'}`} />
+          <span>
+            {isInactive 
+              ? (isTargetHardware ? 'Pico W Inactive' : 'Offline')
+              : (isTargetHardware ? 'Pico W Live Stream' : 'Live telemetry')}
+          </span>
         </div>
 
         <Link

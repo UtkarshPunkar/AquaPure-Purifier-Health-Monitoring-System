@@ -33,8 +33,8 @@ export const PurifiersPage: React.FC = () => {
   const [newPurifier, setNewPurifier] = useState({
     code: '',
     name: '',
-    building: 'Main Administrative Block',
-    floor: 'Ground Floor',
+    building: 'EMTech Dept',
+    floor: '2nd Floor',
     location: '',
     modelType: 'Commercial Multi-Stage RO + UV',
   });
@@ -62,11 +62,11 @@ export const PurifiersPage: React.FC = () => {
 
       let matchesStatus = true;
       if (statusFilter === 'ONLINE') {
-        matchesStatus = p.status !== 'OFFLINE';
+        matchesStatus = p.status !== 'OFFLINE' && p.status !== 'INACTIVE';
       } else if (statusFilter === 'OFFLINE') {
-        matchesStatus = p.status === 'OFFLINE';
+        matchesStatus = p.status === 'OFFLINE' || p.status === 'INACTIVE';
       } else if (statusFilter === 'SAFE') {
-        matchesStatus = p.status === 'HEALTHY';
+        matchesStatus = p.status === 'HEALTHY' || p.status === 'ACTIVE';
       } else if (statusFilter === 'WARNING') {
         matchesStatus = p.status === 'WARNING';
       } else if (statusFilter === 'CRITICAL') {
@@ -97,68 +97,70 @@ export const PurifiersPage: React.FC = () => {
       setNewPurifier({
         code: '',
         name: '',
-        building: 'Main Administrative Block',
-        floor: 'Ground Floor',
+        building: 'EMTech Dept',
+        floor: '2nd Floor',
         location: '',
         modelType: 'Commercial Multi-Stage RO + UV',
       });
       refreshData();
-    }, 1500);
+    }, 1200);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Header with Title and Add Purifier button */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Purifier Fleet Management
+            Purifier Fleet Overview
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time monitoring, filtration diagnostics, and sensor health across campus water units.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Real-time status, health metrics, and telemetry across all installed purification systems.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => refreshData()}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs"
-            title="Refresh Fleet Telemetry"
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs"
+            title="Refresh purifiers"
           >
             <RefreshCw size={15} />
           </button>
+
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-sky-600/20"
+            className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-sky-600/20"
           >
-            <Plus size={16} />
-            <span>+ Add Purifier</span>
+            <Plus size={15} />
+            <span>Add Purifier</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter and View Toggle Toolbar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search input */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          {/* Search Bar */}
+          <div className="relative w-full md:w-80">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search purifier by name, ID (WP-001), building or location..."
+              placeholder="Search by ID, name, building, floor..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full pl-10 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
           </div>
 
-          {/* Building Dropdown Filter */}
-          <div className="flex items-center gap-2">
-            <div className="relative shrink-0">
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
+            {/* Building Dropdown */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Building2 size={14} className="text-slate-400" />
               <select
                 value={buildingFilter}
                 onChange={(e) => setBuildingFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none"
               >
                 <option value="ALL">All Buildings</option>
                 {uniqueBuildings.map((b) => (
@@ -169,33 +171,32 @@ export const PurifiersPage: React.FC = () => {
               </select>
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            {/* Layout Toggle (Grid vs Table) */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-lg transition-colors ${
                   viewMode === 'table'
                     ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
                 title="Table View"
               >
-                <List size={16} />
+                <List size={15} />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
                 title="Grid View"
               >
-                <LayoutGrid size={16} />
+                <LayoutGrid size={15} />
               </button>
             </div>
 
-            {/* Reset Filters */}
             {(search || statusFilter !== 'ALL' || buildingFilter !== 'ALL') && (
               <button
                 onClick={handleResetFilters}
@@ -215,7 +216,7 @@ export const PurifiersPage: React.FC = () => {
           {[
             { id: 'ALL', label: 'All Units' },
             { id: 'ONLINE', label: 'Online' },
-            { id: 'OFFLINE', label: 'Offline' },
+            { id: 'OFFLINE', label: 'Offline / Inactive' },
             { id: 'SAFE', label: 'Safe' },
             { id: 'WARNING', label: 'Warning' },
             { id: 'CRITICAL', label: 'Critical' },
@@ -259,10 +260,11 @@ export const PurifiersPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
                 {filtered.map((p) => {
                   const filterHealth = p.filter?.healthScore ?? 80;
-                  const isSafe = p.status === 'HEALTHY';
+                  const isInactive = p.status === 'INACTIVE';
+                  const isOff = p.status === 'OFFLINE' || isInactive;
+                  const isSafe = p.status === 'HEALTHY' || p.status === 'ACTIVE';
                   const isWarn = p.status === 'WARNING';
                   const isCrit = p.status === 'CRITICAL';
-                  const isOff = p.status === 'OFFLINE';
 
                   return (
                     <tr
@@ -274,7 +276,7 @@ export const PurifiersPage: React.FC = () => {
                         <div className="flex items-center gap-1.5 font-mono font-bold text-sky-600 dark:text-sky-400">
                           <span>{p.purifierCode}</span>
                           {p.isPhysicalHardware && (
-                            <span className="text-[10px] bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300 px-1.5 py-0.2 rounded border border-sky-200 dark:border-sky-800 font-medium">
+                            <span className="text-[9px] font-sans px-1 py-0.2 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
                               Pico W
                             </span>
                           )}
@@ -293,7 +295,9 @@ export const PurifiersPage: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                            isOff
+                            isInactive
+                              ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                              : isOff
                               ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                               : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                           }`}
@@ -301,13 +305,15 @@ export const PurifiersPage: React.FC = () => {
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${isOff ? 'bg-slate-400' : 'bg-emerald-500 animate-pulse'}`}
                           />
-                          <span>{isOff ? 'Offline' : 'Online'}</span>
+                          <span>{isInactive ? 'Inactive' : isOff ? 'Offline' : 'Online'}</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                            isSafe
+                            isInactive
+                              ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                              : isSafe
                               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                               : isWarn
                               ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
@@ -316,10 +322,10 @@ export const PurifiersPage: React.FC = () => {
                               : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                           }`}
                         >
-                          {isSafe ? 'Safe' : isWarn ? 'Warning' : isCrit ? 'Critical' : 'Offline'}
+                          {isInactive ? 'Standby' : isSafe ? 'Safe' : isWarn ? 'Warning' : isCrit ? 'Critical' : 'Offline'}
                         </span>
                         <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                          TDS {p.currentTelemetry?.tds || 150} ppm
+                          {isInactive ? 'Standby' : `TDS ${p.currentTelemetry?.tds || 150} ppm`}
                         </div>
                       </td>
                       <td className="py-3.5 px-4 font-mono">

@@ -116,7 +116,7 @@ export const AnimatedSideDecorations: React.FC = () => {
                   TDS Level
                 </div>
                 <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                  WHO Potable Standard
+                  Optimal Potable Standard
                 </div>
               </div>
             </div>

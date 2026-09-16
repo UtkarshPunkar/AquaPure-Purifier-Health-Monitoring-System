@@ -42,18 +42,16 @@ export const PurifierDetailPage: React.FC = () => {
   const { purifiers, alerts } = useTelemetry();
   const { theme } = useTheme();
   const [purifier, setPurifier] = useState<Purifier | null>(null);
-  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | 'custom'>('24h');
-  const [customDate, setCustomDate] = useState<string>('2026-09-02');
+  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
   const [historyReadings, setHistoryReadings] = useState<any[]>([]);
   const [selectedChart, setSelectedChart] = useState<
-    'all' | 'tds' | 'turbidity' | 'flow' | 'ph' | 'temp' | 'filter'
+    'all' | 'tds' | 'turbidity' | 'flow' | 'ph' | 'temp'
   >('all');
   const [aiDetections, setAiDetections] = useState<AiDetectionItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     type: 'FILTER_REPLACEMENT',
-    technician: 'Vedant Bhanarkar',
     notes: 'Preventive membrane servicing based on telemetry trends.',
   });
 
@@ -64,23 +62,21 @@ export const PurifierDetailPage: React.FC = () => {
       const p = await api.getPurifierById(id);
       setPurifier(p);
 
-      const tf = timeframe === 'custom' ? '24h' : timeframe;
-      const readings = await api.getPurifierReadings(id, tf as any);
+      const readings = await api.getPurifierReadings(id, timeframe);
       const formatted = readings.map((r: any) => ({
         ...r,
         formattedTime:
-          timeframe === '24h' || timeframe === 'custom'
+          timeframe === '24h'
             ? new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : new Date(r.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }),
       }));
       setHistoryReadings(formatted);
 
-      // Load AI detections for this purifier
       const allAi = await api.getAiDetections();
       const unitAi = allAi.filter((a) => a.purifierId === p.id || a.purifier?.purifierCode === p.purifierCode);
       setAiDetections(unitAi);
     } catch (err) {
-      console.error('Failed to load purifier detail:', err);
+      console.error('Failed to load purifier details:', err);
     } finally {
       setIsLoading(false);
     }
@@ -90,10 +86,10 @@ export const PurifierDetailPage: React.FC = () => {
     loadData();
   }, [id, timeframe]);
 
-  // Sync live readings from context
+  // Sync with live telemetry updates
   useEffect(() => {
-    if (!id || !purifier) return;
-    const live = purifiers.find((p) => p.id === id || p.purifierCode === id);
+    if (!id) return;
+    const live = purifiers.find((p) => p.id === id);
     if (live) {
       setPurifier((prev) =>
         prev
@@ -116,7 +112,6 @@ export const PurifierDetailPage: React.FC = () => {
       await api.scheduleMaintenance({
         purifierId: purifier.id,
         type: scheduleData.type,
-        technician: scheduleData.technician,
         notes: scheduleData.notes,
       });
       setIsScheduleModalOpen(false);
@@ -165,6 +160,8 @@ export const PurifierDetailPage: React.FC = () => {
   const tooltipBorder = isDark ? '#334155' : '#e2e8f0';
   const tooltipText = isDark ? '#f8fafc' : '#0f172a';
 
+  const isInactive = purifier.status === 'INACTIVE' || purifier.status === 'OFFLINE';
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Top Header */}
@@ -183,17 +180,21 @@ export const PurifierDetailPage: React.FC = () => {
                 {purifier.purifierCode}
               </span>
               {purifier.isPhysicalHardware && (
-                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-lg font-medium flex items-center gap-1">
-                  <Cpu size={11} /> Raspberry Pi Pico W
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                  isInactive 
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                    : 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800'
+                }`}>
+                  Target Hardware (Pico W)
                 </span>
               )}
-              <StatusBadge status={purifier.status} size="sm" showPulse />
+              <StatusBadge status={purifier.status} size="sm" showPulse={!isInactive} />
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
               {purifier.name}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              📍 {purifier.building} &bull; {purifier.floor} &bull; {purifier.location} &bull; Last Comm: 2 min ago
+              📍 {purifier.building} &bull; {purifier.floor} &bull; {purifier.location} &bull; {isInactive ? 'Status: Hardware Inactive' : 'Last Comm: Live Stream'}
             </p>
           </div>
         </div>
@@ -209,6 +210,23 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Hardware Inactive Notification */}
+      {purifier.isPhysicalHardware && isInactive && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300/80 dark:border-amber-800/80 flex items-start gap-3 text-xs">
+          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+            <Cpu size={18} />
+          </div>
+          <div>
+            <h4 className="font-bold text-amber-900 dark:text-amber-200">
+              Raspberry Pi Pico W Hardware Inactive
+            </h4>
+            <p className="text-amber-800 dark:text-amber-300/90 mt-0.5 leading-relaxed">
+              This unit is configured for live Raspberry Pi Pico W telemetry. Because no active hardware transmission is currently detected, it is displaying <strong>Inactive</strong>. Connect your Pico W to Wi-Fi to automatically activate real-time telemetry ingestion.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 2. Sensor Cards (pH, TDS, Turbidity, Temperature, Water Level, Flow Rate, Filter Health) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* pH */}
@@ -218,10 +236,10 @@ export const PurifierDetailPage: React.FC = () => {
             <Gauge size={14} className="text-sky-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.ph.toFixed(2)}
+            {isInactive ? '--' : tel.ph.toFixed(2)}
           </div>
-          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            {tel.ph >= 6.5 && tel.ph <= 8.5 ? 'Safe (6.5-8.5)' : 'Warning Range'}
+          <div className={`text-[10px] font-bold mt-1 ${isInactive ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {isInactive ? 'Standby (Offline)' : tel.ph >= 6.5 && tel.ph <= 8.5 ? 'Safe (6.5-8.5)' : 'Warning Range'}
           </div>
         </div>
 
@@ -279,17 +297,17 @@ export const PurifierDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Water Level */}
+        {/* Water Flow Rate */}
         <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
-            <span>Water Level</span>
+            <span>Water Flow</span>
             <Activity size={14} className="text-indigo-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.waterLevel || 82}%
+            {tel.flowRate.toFixed(2)} <span className="text-xs font-normal text-slate-400">L/min</span>
           </div>
           <div className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mt-1">
-            Tank Capacity
+            {tel.flowRate >= 1.5 ? 'Active Dispense' : tel.flowRate > 0.3 ? 'Low Flow' : 'Standby / Idle'}
           </div>
         </div>
 
@@ -320,16 +338,13 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Remaining Life Days */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Remaining Life</span>
             <Calendar size={14} className="text-rose-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {filter?.estimatedRemainingLifeDays ?? 45} <span className="text-xs font-normal text-slate-400">Days</span>
-          </div>
-          <div className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mt-1">
-            Next Service: {filter?.estimatedRemainingLifeDays && filter.estimatedRemainingLifeDays <= 3 ? 'Immediate' : '~20 Days'}
           </div>
         </div>
       </div>
@@ -351,7 +366,7 @@ export const PurifierDetailPage: React.FC = () => {
             <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
               Water Quality Index
             </h3>
-            <p className="text-[11px] text-slate-400">NSF & WHO Potability Scoring</p>
+            <p className="text-[11px] text-slate-400">Standard Potability Scoring</p>
           </div>
 
           <div className="my-2">
@@ -366,7 +381,7 @@ export const PurifierDetailPage: React.FC = () => {
 
           <div className="w-full text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl text-center leading-relaxed">
             {tel.wqiScore >= 85
-              ? 'Optimal drinking water compliance with WHO safety guidelines.'
+              ? 'Optimal drinking water compliance with safety guidelines.'
               : tel.wqiScore >= 65
               ? 'Acceptable potability with early mineral saturation.'
               : 'Sub-standard water safety. Immediate filter overhaul required.'}
@@ -402,26 +417,7 @@ export const PurifierDetailPage: React.FC = () => {
                   {tf === '24h' ? 'Last 24 Hours' : tf === '7d' ? '7 Days' : '30 Days'}
                 </button>
               ))}
-              <button
-                onClick={() => setTimeframe('custom')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                  timeframe === 'custom'
-                    ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Custom Date
-              </button>
             </div>
-
-            {timeframe === 'custom' && (
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-800 dark:text-slate-200"
-              />
-            )}
           </div>
         </div>
 
@@ -433,7 +429,6 @@ export const PurifierDetailPage: React.FC = () => {
             { id: 'tds', label: 'TDS vs Time (ppm)' },
             { id: 'turbidity', label: 'Turbidity vs Time (NTU)' },
             { id: 'temp', label: 'Temperature vs Time (°C)' },
-            { id: 'filter', label: 'Filter Degradation Curve' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -489,14 +484,6 @@ export const PurifierDetailPage: React.FC = () => {
                 <YAxis stroke={textStroke} fontSize={11} domain={[15, 35]} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Line type="monotone" dataKey="temperature" stroke="#f43f5e" strokeWidth={2} dot={false} name="Temperature (°C)" />
-              </LineChart>
-            ) : selectedChart === 'filter' ? (
-              <LineChart data={historyReadings}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} domain={[0, 100]} />
-                <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
-                <Line type="monotone" dataKey="filterHealth" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Filter Health (%)" />
               </LineChart>
             ) : (
               <LineChart data={historyReadings}>
@@ -635,19 +622,6 @@ export const PurifierDetailPage: React.FC = () => {
                   <option value="ROUTINE_CHECKUP">Routine Diagnostic Checkup</option>
                   <option value="SENSOR_CALIBRATION">Sensor Probe Calibration</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assigned Technician
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={scheduleData.technician}
-                  onChange={(e) => setScheduleData({ ...scheduleData, technician: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
-                />
               </div>
 
               <div>

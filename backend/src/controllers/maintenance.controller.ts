@@ -18,29 +18,54 @@ export async function getMaintenanceLogs(req: Request, res: Response) {
 
 export async function scheduleMaintenance(req: Request, res: Response) {
   try {
-    const { purifierId, date, type, technician, cost, notes } = req.body;
+    const { purifierId, date, scheduledDate: schedDate, type, priority, issue, technician, cost, notes } = req.body;
 
-    if (!purifierId || !type || !technician) {
-      return res.status(400).json({ error: 'purifierId, type, and technician are required' });
+    if (!purifierId) {
+      return res.status(400).json({ error: 'purifierId is required' });
     }
 
-    const scheduledDate = date ? new Date(date) : new Date(Date.now() + 24 * 3600 * 1000);
+    const rawDate = schedDate || date;
+    const scheduledDateObj = rawDate ? new Date(rawDate) : new Date(Date.now() + 24 * 3600 * 1000);
+
+    const purifier = await prisma.purifier.findUnique({
+      where: { id: String(purifierId) },
+    });
+
+    const count = await prisma.maintenanceRecord.count();
+    const maintenanceCode = `MNT-${1000 + count + 1}`;
 
     const record = await prisma.maintenanceRecord.create({
       data: {
+        maintenanceCode,
         purifierId: String(purifierId),
-        date: scheduledDate,
-        type: String(type),
-        technician: String(technician),
+        date: scheduledDateObj,
+        scheduledDate: scheduledDateObj,
+        type: type ? String(type) : 'FILTER_REPLACEMENT',
+        issue: issue ? String(issue) : 'Scheduled Preventive Maintenance & Filter Replacement',
+        priority: priority ? String(priority) : 'HIGH',
+        technician: technician ? String(technician) : 'Maintenance Team',
         cost: cost ? parseFloat(cost) : 0,
-        notes: notes ? String(notes) : 'Scheduled preventive maintenance service.',
+        notes: notes ? String(notes) : 'Scheduled maintenance service dispatched.',
         status: 'SCHEDULED',
       },
     });
 
     await prisma.purifier.update({
       where: { id: String(purifierId) },
-      data: { nextMaintenanceDue: scheduledDate },
+      data: { nextMaintenanceDue: scheduledDateObj },
+    });
+
+    // Create notification alert for scheduled maintenance date
+    await prisma.alert.create({
+      data: {
+        purifierId: String(purifierId),
+        severity: priority === 'CRITICAL' ? 'CRITICAL' : 'WARNING',
+        type: 'PREDICTIVE',
+        category: 'FILTER_HEALTH',
+        title: `Maintenance Scheduled: ${purifier?.purifierCode || 'Purifier Unit'}`,
+        message: `Maintenance scheduled for ${scheduledDateObj.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}: ${issue || 'Filter Replacement & Inspection'}.`,
+        recommendation: `Execute scheduled maintenance and filter service on ${scheduledDateObj.toLocaleDateString()}.`,
+      },
     });
 
     return res.status(201).json(record);

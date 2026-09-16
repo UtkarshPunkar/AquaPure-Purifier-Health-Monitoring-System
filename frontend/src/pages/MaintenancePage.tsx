@@ -29,7 +29,6 @@ export const MaintenancePage: React.FC = () => {
     purifierId: '',
     issue: 'RO Membrane & Carbon Filter Replacement',
     priority: 'HIGH',
-    technician: 'Field Maintenance Team',
     scheduledDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
     notes: 'Auto-triggered by predictive degradation threshold.',
   });
@@ -74,7 +73,6 @@ export const MaintenancePage: React.FC = () => {
         type: 'FILTER_REPLACEMENT',
         issue: formData.issue,
         priority: formData.priority,
-        technician: formData.technician,
         scheduledDate: formData.scheduledDate,
         notes: formData.notes,
       });
@@ -105,7 +103,6 @@ export const MaintenancePage: React.FC = () => {
         (r.maintenanceCode && r.maintenanceCode.toLowerCase().includes(q)) ||
         (r.purifier?.purifierCode && r.purifier.purifierCode.toLowerCase().includes(q)) ||
         (r.purifier?.name && r.purifier.name.toLowerCase().includes(q)) ||
-        (r.technician && r.technician.toLowerCase().includes(q)) ||
         (r.issue && r.issue.toLowerCase().includes(q));
 
       const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
@@ -123,9 +120,6 @@ export const MaintenancePage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Maintenance Management
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Dispatch service tickets, track technician work orders, and review membrane replacement logs.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -142,7 +136,6 @@ export const MaintenancePage: React.FC = () => {
                 purifierId: purifiers[0]?.id || '',
                 issue: 'RO Membrane & Carbon Filter Replacement',
                 priority: 'HIGH',
-                technician: 'Rajesh Sharma',
                 scheduledDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
                 notes: 'Scheduled service dispatched based on telemetry analysis.',
               });
@@ -221,7 +214,7 @@ export const MaintenancePage: React.FC = () => {
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search work orders by ID, purifier code, technician or issue..."
+              placeholder="Search work orders by ID, purifier code or issue..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
@@ -282,7 +275,6 @@ export const MaintenancePage: React.FC = () => {
                 <th className="py-3 px-4">Issue Description</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Scheduled Date</th>
-                <th className="py-3 px-4">Assigned To</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
@@ -298,7 +290,7 @@ export const MaintenancePage: React.FC = () => {
                       {r.maintenanceCode || 'MNT-1001'}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
-                      {r.purifier?.purifierCode || 'WP-001'}
+                      {r.purifier?.purifierCode || 'WP-1'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">
                       <div>{r.purifier?.building}</div>
@@ -322,9 +314,6 @@ export const MaintenancePage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400">
                       {r.scheduledDate ? new Date(r.scheduledDate).toLocaleDateString() : new Date(r.date).toLocaleDateString()}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-900 dark:text-white">
-                      {r.technician}
                     </td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={r.status} size="sm" />
@@ -432,20 +421,7 @@ export const MaintenancePage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assigned Technician
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.technician}
-                  onChange={(e) => setFormData({ ...formData, technician: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Technician Notes & Protocol
+                  Service Notes & Protocol
                 </label>
                 <textarea
                   rows={2}
@@ -467,7 +443,7 @@ export const MaintenancePage: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
                 >
-                  Dispatch Ticket
+                  Schedule Service
                 </button>
               </div>
             </form>

@@ -14,7 +14,6 @@ export const PredictiveMaintenancePage: React.FC = () => {
   const { predictions, purifiers, refreshData } = useTelemetry();
   const [selectedPurifier, setSelectedPurifier] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tech, setTech] = useState('Vedant Bhanarkar');
   const [serviceType, setServiceType] = useState('FILTER_REPLACEMENT');
   const [notes, setNotes] = useState('');
 
@@ -31,7 +30,6 @@ export const PredictiveMaintenancePage: React.FC = () => {
       await api.scheduleMaintenance({
         purifierId: selectedPurifier.purifierId,
         type: serviceType,
-        technician: tech,
         notes,
       });
       setIsModalOpen(false);
@@ -211,17 +209,6 @@ export const PredictiveMaintenancePage: React.FC = () => {
                   <option value="MEMBRANE_FLUSH">Pressure Line Flush & Sanitization</option>
                   <option value="ROUTINE_CHECKUP">Routine Preventive Inspection</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="form-label">Assigned Technician</label>
-                <input
-                  type="text"
-                  required
-                  value={tech}
-                  onChange={(e) => setTech(e.target.value)}
-                  className="app-input"
-                />
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { simulationEngine, SimulationScenario } from '../engine/simulation.engine';
 import { z } from 'zod';
@@ -31,9 +31,11 @@ export async function getDashboardOverview(req: Request, res: Response) {
     let readingCount = 0;
 
     for (const p of purifiers) {
+      const isPhysical = Boolean(p.isPhysicalHardware || p.purifierCode === 'WP-1' || p.purifierCode === 'PUR-001');
+      const isHwActive = isPhysical ? simulationEngine.isHardwareActive(p.id) : true;
       const liveState = simulationEngine.getState(p.id);
-      const isOffline = liveState?.isOffline ?? (p.device?.status === 'OFFLINE');
-      const status = isOffline ? 'OFFLINE' : (liveState ? (p.status) : p.status);
+      const isOffline = isPhysical ? !isHwActive : (liveState?.isOffline ?? (p.device?.status === 'OFFLINE'));
+      const status = isOffline ? 'OFFLINE' : (liveState ? (p.status === 'INACTIVE' ? 'HEALTHY' : p.status) : p.status);
       const filter = p.filters[0];
 
       if (isOffline) {
@@ -51,7 +53,7 @@ export async function getDashboardOverview(req: Request, res: Response) {
       }
 
       const reading = p.sensorReadings[0];
-      if (reading) {
+      if (reading && !isOffline) {
         totalWqi += reading.wqiScore;
         totalTds += reading.tds;
         totalTurbidity += reading.turbidity;
@@ -103,7 +105,7 @@ export async function getDashboardOverview(req: Request, res: Response) {
 // IoT Ingestion Schema for Raspberry Pi Pico W
 const PicoWReadingSchema = z.object({
   deviceId: z.string().optional().default('PICO-W-001'),
-  purifierCode: z.string().optional().default('WP-001'),
+  purifierCode: z.string().optional().default('WP-1'),
   purifier_id: z.string().optional(),
   ph: z.number().min(0).max(14),
   tds: z.number().min(0).max(5000),
@@ -126,7 +128,7 @@ export async function ingestIotSensorData(req: Request, res: Response) {
     }
 
     const data = parseResult.data;
-    const purifierCode = data.purifier_id || data.purifierCode || 'WP-001';
+    const purifierCode = data.purifier_id || data.purifierCode || 'WP-1';
     const deviceId = data.deviceId || 'PICO-W-001';
 
     const result = await simulationEngine.ingestHardwareReading({
@@ -170,6 +172,31 @@ export async function ingestPicoWReading(req: Request, res: Response) {
   } catch (error: any) {
     console.error('ingestPicoWReading error:', error);
     return res.status(500).json({ error: error.message || 'Failed to ingest sensor reading' });
+  }
+}
+
+export async function disconnectHardware(req: Request, res: Response) {
+  try {
+    const { purifierCode } = req.body || {};
+    await simulationEngine.setHardwareDisconnected(purifierCode || 'WP-1');
+    return res.json({ message: 'Hardware node flagged as disconnected / inactive', status: 'INACTIVE' });
+  } catch (error: any) {
+    console.error('disconnectHardware error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to disconnect hardware' });
+  }
+}
+
+export async function setHardwareStatus(req: Request, res: Response) {
+  try {
+    const { isConnected, purifierCode } = req.body || {};
+    if (!isConnected) {
+      await simulationEngine.setHardwareDisconnected(purifierCode || 'WP-1');
+      return res.json({ message: 'Hardware marked as disconnected / inactive', status: 'INACTIVE' });
+    }
+    return res.json({ message: 'Hardware status acknowledged', status: 'ONLINE' });
+  } catch (error: any) {
+    console.error('setHardwareStatus error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to update hardware status' });
   }
 }
 

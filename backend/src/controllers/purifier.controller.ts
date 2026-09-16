@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { simulationEngine } from '../engine/simulation.engine';
 import { runPredictiveAnalysis } from '../engine/predictive.engine';
@@ -27,6 +27,17 @@ export async function getAllPurifiers(req: Request, res: Response) {
       const latestReading = p.sensorReadings[0];
       const filter = p.filters[0];
       const prediction = p.predictions[0];
+      const isPhysical = Boolean(p.isPhysicalHardware || p.purifierCode === 'WP-1' || p.purifierCode === 'PUR-001');
+      const isHwActive = simulationEngine.isHardwareActive(p.id);
+
+      const status = isPhysical ? (isHwActive ? (p.status === 'INACTIVE' ? 'HEALTHY' : p.status) : 'INACTIVE') : p.status;
+      const deviceStatus = isPhysical ? (isHwActive ? 'ONLINE' : 'INACTIVE') : (p.device?.status || 'ONLINE');
+
+      const ph = liveState?.currentPh ?? latestReading?.ph ?? 7.2;
+      const tds = liveState?.currentTds ?? latestReading?.tds ?? 150;
+      const turbidity = liveState?.currentTurbidity ?? latestReading?.turbidity ?? 0.4;
+      const temperature = liveState?.currentTemperature ?? latestReading?.temperature ?? 24.0;
+      const flowRate = liveState?.currentFlowRate ?? latestReading?.flowRate ?? 2.4;
 
       return {
         id: p.id,
@@ -35,22 +46,22 @@ export async function getAllPurifiers(req: Request, res: Response) {
         location: p.location,
         building: p.building,
         floor: p.floor,
-        status: p.status,
-        isPhysicalHardware: p.isPhysicalHardware,
+        status,
+        isPhysicalHardware: isPhysical,
         modelType: p.modelType,
         deviceId: p.deviceId,
         installationDate: p.installationDate,
         lastMaintenance: p.lastMaintenance,
         nextMaintenanceDue: p.nextMaintenanceDue,
         currentTelemetry: {
-          ph: liveState ? liveState.currentPh : latestReading?.ph ?? 7.2,
-          tds: liveState ? liveState.currentTds : latestReading?.tds ?? 150,
-          turbidity: liveState ? liveState.currentTurbidity : latestReading?.turbidity ?? 0.4,
-          temperature: liveState ? liveState.currentTemperature : latestReading?.temperature ?? 24.0,
-          flowRate: liveState ? liveState.currentFlowRate : latestReading?.flowRate ?? 2.4,
-          wqiScore: latestReading?.wqiScore ?? 90,
-          wqiStatus: latestReading?.wqiStatus ?? 'EXCELLENT',
-          lastSeen: liveState?.lastReadingTime ?? latestReading?.timestamp ?? new Date(),
+          ph: isPhysical && !isHwActive ? (liveState?.currentPh || 7.2) : ph,
+          tds: isPhysical && !isHwActive ? (liveState?.currentTds || 150) : tds,
+          turbidity: isPhysical && !isHwActive ? (liveState?.currentTurbidity || 0.4) : turbidity,
+          temperature: isPhysical && !isHwActive ? (liveState?.currentTemperature || 24.0) : temperature,
+          flowRate: isPhysical && !isHwActive ? 0 : flowRate,
+          wqiScore: isPhysical && !isHwActive ? 0 : (latestReading?.wqiScore ?? 90),
+          wqiStatus: isPhysical && !isHwActive ? 'STANDBY' : (latestReading?.wqiStatus ?? 'EXCELLENT'),
+          lastSeen: isPhysical && !isHwActive ? (liveState?.lastHardwareReadingTime || null) : (liveState?.lastReadingTime ?? latestReading?.timestamp ?? new Date()),
         },
         filter: filter
           ? {
@@ -62,7 +73,13 @@ export async function getAllPurifiers(req: Request, res: Response) {
               status: filter.status,
             }
           : null,
-        device: p.device,
+        device: p.device ? {
+          ...p.device,
+          status: deviceStatus,
+          oledStatus: isPhysical && !isHwActive ? 'HARDWARE DISCONNECTED' : p.device.oledStatus,
+          ledStatus: isPhysical && !isHwActive ? 'OFF' : p.device.ledStatus,
+          buzzerStatus: isPhysical && !isHwActive ? false : p.device.buzzerStatus,
+        } : null,
         prediction: prediction,
         scenario: liveState?.scenario ?? 'NORMAL',
       };
@@ -113,8 +130,18 @@ export async function getPurifierById(req: Request, res: Response) {
     const liveState = simulationEngine.getState(purifier.id);
     const filter = purifier.filters[0] || null;
     const latestReading = purifier.sensorReadings[0];
+    const isPhysical = Boolean(purifier.isPhysicalHardware || purifier.purifierCode === 'WP-1' || purifier.purifierCode === 'PUR-001');
+    const isHwActive = simulationEngine.isHardwareActive(purifier.id);
 
-    // Compute on-the-fly comprehensive predictive analysis using recent readings
+    const status = isPhysical ? (isHwActive ? (purifier.status === 'INACTIVE' ? 'HEALTHY' : purifier.status) : 'INACTIVE') : purifier.status;
+    const deviceStatus = isPhysical ? (isHwActive ? 'ONLINE' : 'INACTIVE') : (purifier.device?.status || 'ONLINE');
+
+    const ph = liveState?.currentPh ?? latestReading?.ph ?? 7.2;
+    const tds = liveState?.currentTds ?? latestReading?.tds ?? 150;
+    const turbidity = liveState?.currentTurbidity ?? latestReading?.turbidity ?? 0.4;
+    const temperature = liveState?.currentTemperature ?? latestReading?.temperature ?? 24.0;
+    const flowRate = liveState?.currentFlowRate ?? latestReading?.flowRate ?? 2.4;
+
     const recentReadings = await prisma.sensorReading.findMany({
       where: { purifierId: purifier.id },
       orderBy: { timestamp: 'desc' },
@@ -125,17 +152,26 @@ export async function getPurifierById(req: Request, res: Response) {
 
     return res.json({
       ...purifier,
+      status,
+      isPhysicalHardware: isPhysical,
+      device: purifier.device ? {
+        ...purifier.device,
+        status: deviceStatus,
+        oledStatus: isPhysical && !isHwActive ? 'HARDWARE DISCONNECTED' : purifier.device.oledStatus,
+        ledStatus: isPhysical && !isHwActive ? 'OFF' : purifier.device.ledStatus,
+        buzzerStatus: isPhysical && !isHwActive ? false : purifier.device.buzzerStatus,
+      } : null,
       liveState: liveState || null,
       currentTelemetry: {
-        ph: liveState ? liveState.currentPh : latestReading?.ph ?? 7.2,
-        tds: liveState ? liveState.currentTds : latestReading?.tds ?? 150,
-        turbidity: liveState ? liveState.currentTurbidity : latestReading?.turbidity ?? 0.4,
-        temperature: liveState ? liveState.currentTemperature : latestReading?.temperature ?? 24.0,
-        flowRate: liveState ? liveState.currentFlowRate : latestReading?.flowRate ?? 2.4,
-        wqiScore: latestReading?.wqiScore ?? 90,
-        wqiStatus: latestReading?.wqiStatus ?? 'EXCELLENT',
+        ph: isPhysical && !isHwActive ? (liveState?.currentPh || 7.2) : ph,
+        tds: isPhysical && !isHwActive ? (liveState?.currentTds || 150) : tds,
+        turbidity: isPhysical && !isHwActive ? (liveState?.currentTurbidity || 0.4) : turbidity,
+        temperature: isPhysical && !isHwActive ? (liveState?.currentTemperature || 24.0) : temperature,
+        flowRate: isPhysical && !isHwActive ? 0 : flowRate,
+        wqiScore: isPhysical && !isHwActive ? 0 : (latestReading?.wqiScore ?? 90),
+        wqiStatus: isPhysical && !isHwActive ? 'STANDBY' : (latestReading?.wqiStatus ?? 'EXCELLENT'),
         filterHealth: liveState ? liveState.currentFilterHealth : filter?.healthScore ?? 90,
-        lastSeen: liveState?.lastReadingTime ?? latestReading?.timestamp ?? new Date(),
+        lastSeen: isPhysical && !isHwActive ? (liveState?.lastHardwareReadingTime || null) : (liveState?.lastReadingTime ?? latestReading?.timestamp ?? new Date()),
       },
       livePredictiveAnalysis: liveAnalysis,
     });
@@ -148,7 +184,7 @@ export async function getPurifierById(req: Request, res: Response) {
 export async function getPurifierReadings(req: Request, res: Response) {
   try {
     const id = String(req.params.id);
-    const timeframe = (req.query.timeframe as string) || '24h'; // 24h, 7d, 30d
+    const timeframe = (req.query.timeframe as string) || '24h';
 
     let hours = 24;
     if (timeframe === '7d') hours = 7 * 24;

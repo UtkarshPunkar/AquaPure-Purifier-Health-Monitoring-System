@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { WaterBubblesBackground } from '../common/WaterBubblesBackground';
 
 export const AppLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row antialiased transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row antialiased transition-colors relative">
+      {/* Dynamic Water Bubbles & Aquatic Glow Atmosphere (Active for all app pages) */}
+      <WaterBubblesBackground />
+
       {/* Left Sidebar (Desktop static / Mobile Drawer) */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Right Column: Main Content + Footer */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative z-10">
         {/* Main Content Area */}
-        <main className="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1750px] w-full mx-auto">
+        <main className="relative z-10 flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1750px] w-full mx-auto">
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>

@@ -195,12 +195,12 @@ export const DashboardPage: React.FC = () => {
           {/* Top Hero Cards (Matching Reference Image Dimensions & Style) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Card 1: Filter Active Status */}
-            <div className="bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px]">
+            <div className="water-card-shine bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px] transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 tracking-wider uppercase">
                   Filter Active Status
                 </span>
-                <Activity size={16} className="text-emerald-500" />
+                <Activity size={16} className="text-emerald-500 animate-water-float" />
               </div>
 
               <div className="space-y-1 py-1">
@@ -244,10 +244,10 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {/* Card 2: Average Health of All Filters */}
-            <div className="bg-[#F0BF38] p-4 sm:p-4.5 rounded-[26px] text-slate-950 shadow-[0_10px_26px_rgba(240,191,56,0.22)] flex flex-col justify-between h-[210px] relative overflow-hidden">
+            <div className="water-card-shine bg-[#F0BF38] p-4 sm:p-4.5 rounded-[26px] text-slate-950 shadow-[0_10px_26px_rgba(240,191,56,0.22)] flex flex-col justify-between h-[210px] relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center justify-between text-xs font-bold opacity-90 pb-1">
                 <span>Average Filter Health</span>
-                <ShieldCheck size={18} />
+                <ShieldCheck size={18} className="animate-water-float" />
               </div>
 
               <div className="my-auto py-1">
@@ -266,10 +266,10 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {/* Card 3: Total Water Flow & Peak Hours (White Minimal Card) */}
-            <div className="bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px]">
+            <div className="water-card-shine bg-white dark:bg-slate-900 p-4 sm:p-4.5 rounded-[26px] border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex flex-col justify-between h-[210px] transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
-                  <Droplets size={15} className="text-sky-500 shrink-0" />
+                  <Droplets size={15} className="text-sky-500 shrink-0 animate-water-float" />
                   <span>Total Water Flow</span>
                 </div>
               </div>

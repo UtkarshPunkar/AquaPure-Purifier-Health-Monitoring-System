@@ -270,10 +270,10 @@ export const PurifierDetailPage: React.FC = () => {
       {/* 2. Sensor Cards (pH, TDS, Turbidity, Temperature, Water Level, Flow Rate, Filter Health) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* pH */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>pH Level</span>
-            <Gauge size={14} className="text-sky-500" />
+            <Gauge size={14} className="text-sky-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : tel.ph.toFixed(2)}
@@ -284,10 +284,10 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* TDS */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>TDS</span>
-            <Droplets size={14} className="text-cyan-500" />
+            <Droplets size={14} className="text-cyan-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : `${tel.tds.toFixed(0)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'ppm'}</span>
@@ -308,10 +308,10 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Turbidity */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Turbidity</span>
-            <Waves size={14} className="text-teal-500" />
+            <Waves size={14} className="text-teal-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : `${tel.turbidity.toFixed(2)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'NTU'}</span>
@@ -330,10 +330,10 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Temperature */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Temperature</span>
-            <Thermometer size={14} className="text-amber-500" />
+            <Thermometer size={14} className="text-amber-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : `${tel.temperature.toFixed(1)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : '°C'}</span>
@@ -344,10 +344,10 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Water Flow Rate */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Water Flow</span>
-            <Activity size={14} className="text-indigo-500" />
+            <Activity size={14} className="text-indigo-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '0.00' : tel.flowRate.toFixed(2)} <span className="text-xs font-normal text-slate-400">L/min</span>
@@ -358,10 +358,10 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Filter Health */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Filter Health</span>
-            <Gauge size={14} className="text-purple-500" />
+            <Gauge size={14} className="text-purple-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : filter ? `${filter.healthScore.toFixed(0)}%` : 'N/A'}
@@ -388,15 +388,15 @@ export const PurifierDetailPage: React.FC = () => {
         </div>
 
         {/* Remaining Life Days */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Remaining Life</span>
-            <Calendar size={14} className="text-rose-500" />
+            <Calendar size={14} className="text-rose-500 animate-water-float" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
             {isInactive ? '--' : `${filter?.estimatedRemainingLifeDays ?? 45} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'Days'}</span>
           </div>
-          <div className="text-[10px] font-bold text-slate-400 mt-1">
+          <div className={`text-[10px] font-bold mt-1 ${isInactive ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'}`}>
             {isInactive ? 'Standby (Offline)' : 'Estimated Duration'}
           </div>
         </div>

@@ -303,19 +303,19 @@ export const WaterQualityPage: React.FC = () => {
 
       {/* 5 Sensor Parameter Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>pH Balance</span>
-            <Gauge size={14} className="text-sky-500" />
+            <Gauge size={14} className="text-sky-500 animate-water-float" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">{avgPh} pH</div>
           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">Normal (6.5 - 8.5)</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>TDS Level</span>
-            <Droplets size={14} className="text-cyan-500" />
+            <Droplets size={14} className="text-cyan-500 animate-water-float" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
             {avgTds} <span className="text-xs font-normal text-slate-400">ppm</span>
@@ -323,10 +323,10 @@ export const WaterQualityPage: React.FC = () => {
           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">Optimal (&lt; 300 ppm)</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Turbidity</span>
-            <Waves size={14} className="text-teal-500" />
+            <Waves size={14} className="text-teal-500 animate-water-float" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
             {avgTurbidity} <span className="text-xs font-normal text-slate-400">NTU</span>
@@ -334,10 +334,10 @@ export const WaterQualityPage: React.FC = () => {
           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">Clear (&lt; 5.0 NTU)</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Temperature</span>
-            <Thermometer size={14} className="text-amber-500" />
+            <Thermometer size={14} className="text-amber-500 animate-water-float" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
             {avgTemp} <span className="text-xs font-normal text-slate-400">°C</span>
@@ -345,10 +345,10 @@ export const WaterQualityPage: React.FC = () => {
           <div className="text-[10px] text-slate-400 font-bold mt-1">Range: 10 - 35°C</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs col-span-2 sm:col-span-1">
+        <div className="water-card-shine bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs col-span-2 sm:col-span-1 hover:-translate-y-0.5 transition-all duration-300">
           <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium">
             <span>Water Flow</span>
-            <Activity size={14} className="text-indigo-500" />
+            <Activity size={14} className="text-indigo-500 animate-water-float" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
             {avgFlow} <span className="text-xs font-normal text-slate-400">L/min</span>

@@ -813,7 +813,178 @@ html.dark .dashboard-glow-orb {
 
 /* Page Transition Container */
 .page-enter {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageEnter 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Ambient motion for authenticated detail pages. The dashboard keeps its own atmosphere. */
+.app-motion-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-motion-glow,
+.app-motion-lines,
+.app-water-bubbles {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-motion-glow {
+  width: min(38vw, 560px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(72px);
+  opacity: 0.22;
+  animation: appGlowDrift 13s ease-in-out infinite;
+}
+
+.app-motion-glow-left {
+  top: 8rem;
+  left: -20rem;
+  background: rgba(14, 165, 233, 0.42);
+}
+
+.app-motion-glow-right {
+  right: -18rem;
+  bottom: -8rem;
+  background: rgba(20, 184, 166, 0.28);
+  animation-delay: -6s;
+}
+
+.app-motion-lines {
+  inset: 0;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(14, 165, 233, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.055) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+  animation: appGridDrift 24s linear infinite;
+}
+
+/* AquaPure Interactive Water Bubble Keyframes & Fluid Atmosphere */
+@keyframes waterBubbleFloat {
+  0% {
+    transform: translate3d(0, 40px, 0) scale(0.65);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  85% {
+    opacity: 0.85;
+  }
+  98% {
+    opacity: 0.15;
+    transform: translate3d(0, calc(-100vh - 120px), 0) scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, calc(-100vh - 140px), 0) scale(1.2);
+  }
+}
+
+@keyframes waterBubbleSway {
+  0% {
+    transform: translateX(-16px) rotate(-4deg);
+  }
+  50% {
+    transform: translateX(18px) rotate(5deg);
+  }
+  100% {
+    transform: translateX(-16px) rotate(-4deg);
+  }
+}
+
+@keyframes fluidPulse {
+  0%, 100% {
+    transform: scale(1) translate3d(0, 0, 0);
+    opacity: 0.14;
+  }
+  50% {
+    transform: scale(1.18) translate3d(20px, -24px, 0);
+    opacity: 0.26;
+  }
+}
+
+.animate-fluid-pulse {
+  animation: fluidPulse 14s ease-in-out infinite;
+}
+
+.animate-fluid-pulse-delayed {
+  animation: fluidPulse 18s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+.bg-water-grid {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+    linear-gradient(to right, rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px, 64px 64px, 64px 64px;
+}
+
+/* Water Droplet & Ripple Effects for Cards */
+.water-card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.water-card-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    rgba(56, 189, 248, 0.22),
+    transparent
+  );
+  transform: skewX(-22deg);
+  transition: none;
+  pointer-events: none;
+}
+
+.water-card-shine:hover::after {
+  left: 180%;
+  transition: left 0.85s ease-in-out;
+}
+
+/* Water Droplet Buoyancy Float */
+@keyframes waterDropFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-water-float {
+  animation: waterDropFloat 3s ease-in-out infinite;
+}
+
+/* Water Ripple Pulse */
+@keyframes waterRipplePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(14, 165, 233, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+.water-ripple-badge {
+  animation: waterRipplePulse 2.2s infinite;
 }
 
 /* Scroll Reveal States */
@@ -1006,6 +1177,11 @@ html.dark .glass-pill {
   .scroll-reveal-scale {
     opacity: 1 !important;
     transform: none !important;
+  }
+  .app-motion-glow,
+  .app-motion-lines,
+  .app-water-bubble {
+    animation: none;
   }
 }
 

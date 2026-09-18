@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useTelemetry } from '../context/TelemetryContext';
 import { PurifierCard } from '../components/purifier/PurifierCard';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -394,137 +395,139 @@ export const PurifiersPage: React.FC = () => {
       )}
 
       {/* Add Purifier Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
-            <button
-              onClick={() => {
-                setIsAddModalOpen(false);
-                setAddSuccess(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-            >
-              <X size={18} />
-            </button>
+      {isAddModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+              <button
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  setAddSuccess(false);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+              >
+                <X size={18} />
+              </button>
 
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-              Add New Water Purifier
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              Register an IoT node or standard campus water purifier to the centralized platform.
-            </p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                Add New Water Purifier
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                Register an IoT node or standard campus water purifier to the centralized platform.
+              </p>
 
-            {addSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5">
-                <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
-                <span>Purifier registered successfully! Connecting telemetry stream...</span>
-              </div>
-            ) : (
-              <form onSubmit={handleAddPurifierSubmit} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Purifier Code / ID *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. WP-013"
-                    value={newPurifier.code}
-                    onChange={(e) => setNewPurifier({ ...newPurifier, code: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
+              {addSuccess ? (
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+                  <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+                  <span>Purifier registered successfully! Connecting telemetry stream...</span>
                 </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Purifier Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Biotechnology Wing Water Station"
-                    value={newPurifier.name}
-                    onChange={(e) => setNewPurifier({ ...newPurifier, name: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
+              ) : (
+                <form onSubmit={handleAddPurifierSubmit} className="space-y-3 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Building
+                      Purifier Code / ID *
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Science Block"
-                      value={newPurifier.building}
-                      onChange={(e) => setNewPurifier({ ...newPurifier, building: e.target.value })}
+                      required
+                      placeholder="e.g. WP-013"
+                      value={newPurifier.code}
+                      onChange={(e) => setNewPurifier({ ...newPurifier, code: e.target.value })}
                       className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
+
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Floor
+                      Purifier Name *
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. 2nd Floor"
-                      value={newPurifier.floor}
-                      onChange={(e) => setNewPurifier({ ...newPurifier, floor: e.target.value })}
+                      required
+                      placeholder="e.g. Biotechnology Wing Water Station"
+                      value={newPurifier.name}
+                      onChange={(e) => setNewPurifier({ ...newPurifier, name: e.target.value })}
                       className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Location Description
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Near Seminar Hall East"
-                    value={newPurifier.location}
-                    onChange={(e) => setNewPurifier({ ...newPurifier, location: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Building
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Science Block"
+                        value={newPurifier.building}
+                        onChange={(e) => setNewPurifier({ ...newPurifier, building: e.target.value })}
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Floor
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 2nd Floor"
+                        value={newPurifier.floor}
+                        onChange={(e) => setNewPurifier({ ...newPurifier, floor: e.target.value })}
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Purifier Model / Technology
-                  </label>
-                  <select
-                    value={newPurifier.modelType}
-                    onChange={(e) => setNewPurifier({ ...newPurifier, modelType: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  >
-                    <option>Commercial Multi-Stage RO + UV</option>
-                    <option>Industrial Heavy-Duty RO + UF</option>
-                    <option>Commercial RO + Carbon Filter</option>
-                    <option>Ultra-Pure RO + UV + Deionizer</option>
-                  </select>
-                </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Location Description
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Seminar Hall East"
+                      value={newPurifier.location}
+                      onChange={(e) => setNewPurifier({ ...newPurifier, location: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    />
+                  </div>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
-                  >
-                    Add Purifier
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Purifier Model / Technology
+                    </label>
+                    <select
+                      value={newPurifier.modelType}
+                      onChange={(e) => setNewPurifier({ ...newPurifier, modelType: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    >
+                      <option>Commercial Multi-Stage RO + UV</option>
+                      <option>Industrial Heavy-Duty RO + UF</option>
+                      <option>Commercial RO + Carbon Filter</option>
+                      <option>Ultra-Pure RO + UV + Deionizer</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                    >
+                      Add Purifier
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

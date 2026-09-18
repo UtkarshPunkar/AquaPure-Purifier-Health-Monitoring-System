@@ -1,4 +1,4 @@
-# AquaPure Pro: Smart Water Safety & Purifier Health Monitoring System
+# AquaPure: Smart Water Safety & Purifier Health Monitoring System
 
 > **A Retrofit IoT & AI Predictive Maintenance Web Platform for Centralized Water Safety in Organizations**
 
@@ -6,7 +6,7 @@
 
 ## 1. Product Overview
 
-AquaPure Pro is an industrial-grade, full-stack responsive web application designed for institutions (colleges, hospitals, corporate offices, manufacturing plants) that manage multiple water purifiers across large campuses.
+AquaPure is an industrial-grade, full-stack responsive web application designed for institutions (colleges, hospitals, corporate offices, manufacturing plants) that manage multiple water purifiers across large campuses.
 
 Rather than replacing expensive purification machinery, AquaPure retrofits existing purifiers with non-invasive IoT sensor nodes (Raspberry Pi Pico W + ESP32-CAM) to enable **centralized telemetry, WHO-standard water safety scoring, and predictive filter maintenance**.
 

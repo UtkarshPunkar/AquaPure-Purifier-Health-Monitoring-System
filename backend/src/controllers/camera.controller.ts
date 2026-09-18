@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import http from 'http';
 import os from 'os';
 import { snapshotStore } from '../services/snapshotStore';
+import { analyzeVisionFrame } from '../services/visionAnalysis.service';
 
 // Tracking consecutive failure count for smooth debounce
 let consecutiveProbeFailures = 0;
@@ -643,12 +644,12 @@ export async function captureSnapshot(req: Request, res: Response) {
       return res.status(404).json({ error: 'Camera device not found' });
     }
 
-    // Check direct memory frame first
+    // Check direct memory frame first (from USB stream or recent fetch)
     const recentLive = snapshotStore.getLatestLiveFrame();
-    let frameBuffer: Buffer | null = recentLive && (Date.now() - recentLive.timestamp.getTime() < 12000) ? recentLive.buffer : null;
+    let frameBuffer: Buffer | null = recentLive ? recentLive.buffer : null;
     let frameContentType = recentLive ? recentLive.contentType : 'image/jpeg';
 
-    if (!frameBuffer) {
+    if (!frameBuffer || (recentLive && Date.now() - recentLive.timestamp.getTime() > 30000)) {
       const streamUrl = camera.streamUrl || 'http://192.168.4.1/capture';
       let frameResult = await fetchEsp32Frame(streamUrl, 2000);
       if (!frameResult && !streamUrl.includes('192.168.4.1')) {
@@ -671,12 +672,54 @@ export async function captureSnapshot(req: Request, res: Response) {
 
       const snapshotUrl = `/api/camera/snapshot-image/${snapshotId}`;
 
+      // Dynamic AI Optical Clarity & Biological Health Assessment
+      const analysis = analyzeVisionFrame(frameBuffer, {
+        purifierStatus: camera.purifier?.status,
+      });
+
+      // Update purifier health status if a critical or warning hazard was detected
+      let updatedPurifierStatus = camera.purifier?.status || 'HEALTHY';
+      if (analysis.riskLevel === 'CRITICAL') {
+        updatedPurifierStatus = 'CRITICAL';
+      } else if (analysis.riskLevel === 'WARNING' && updatedPurifierStatus !== 'CRITICAL') {
+        updatedPurifierStatus = 'WARNING';
+      }
+
+      if (camera.purifier && updatedPurifierStatus !== camera.purifier.status) {
+        await prisma.purifier.update({
+          where: { id: camera.purifier.id },
+          data: { status: updatedPurifierStatus },
+        });
+      }
+
+      // Auto-generate system alert for camera contaminants
+      if (analysis.riskLevel === 'CRITICAL' || analysis.riskLevel === 'WARNING') {
+        try {
+          await prisma.alert.create({
+            data: {
+              purifierId: camera.purifierId,
+              severity: analysis.riskLevel === 'CRITICAL' ? 'CRITICAL' : 'WARNING',
+              type: 'REACTIVE',
+              category: 'CONTAMINANT',
+              title: `Optical Alert: ${analysis.detectedObject}`,
+              message: `${analysis.detectedObject} detected in chamber with ${analysis.confidence}% confidence.`,
+              recommendation: analysis.recommendation,
+              timestamp,
+              isAcknowledged: false,
+              isResolved: false,
+            },
+          });
+        } catch (alertErr) {
+          console.warn('Failed to auto-create alert in captureSnapshot:', alertErr);
+        }
+      }
+
       const updated = await prisma.cameraDevice.update({
         where: { id: camera.id },
         data: {
           lastSeen: timestamp,
           status: 'ONLINE',
-          opticalInspectionStatus: 'OPTICAL INSPECTION ACTIVE - CLARITY VERIFIED',
+          opticalInspectionStatus: analysis.riskLevel === 'SAFE' ? 'OPTICAL INSPECTION ACTIVE - CLARITY VERIFIED' : `OPTICAL ALERT - ${analysis.detectedObject.toUpperCase()}`,
           lastSnapshotUrl: snapshotUrl,
         },
         include: { purifier: true },
@@ -687,29 +730,34 @@ export async function captureSnapshot(req: Request, res: Response) {
           purifierId: camera.purifierId,
           timestamp,
           capturedImageUrl: snapshotUrl,
-          detectedObject: 'Clean Potable Stream',
-          confidence: 98.8,
-          riskLevel: 'SAFE',
-          boundingBoxJson: JSON.stringify([]),
-          recommendation: 'Visual optical clarity optimal. All macro inspection safety checks passed.',
-          status: 'RESOLVED',
+          detectedObject: analysis.detectedObject,
+          confidence: analysis.confidence,
+          riskLevel: analysis.riskLevel,
+          boundingBoxJson: JSON.stringify(analysis.boundingBoxes),
+          recommendation: analysis.recommendation,
+          status: analysis.riskLevel === 'SAFE' ? 'RESOLVED' : 'ACTIVE',
         },
       });
 
       return res.json({
-        message: 'Live frame captured from ESP32-CAM and optical inspection completed successfully',
+        message: 'Live frame captured from ESP32-CAM and optical AI inspection completed successfully',
         camera: updated,
         isOnline: true,
         capturedAt: timestamp,
-        scanResult: { ...scan, boundingBoxes: [] },
+        scanResult: {
+          ...scan,
+          boundingBoxes: analysis.boundingBoxes,
+          metrics: analysis.metrics,
+        },
       });
     } else {
       return res.status(503).json({
-        error: 'ESP32-CAM is disconnected / unplugged. Connect ESP32-CAM to Wi-Fi to capture live optical frame.',
+        error: 'ESP32-CAM is disconnected / unplugged. Start usb_bridge or connect ESP32-CAM to Wi-Fi to capture live frame.',
         isOnline: false,
         camera: { ...camera, status: 'OFFLINE' },
       });
     }
+
   } catch (error) {
     console.error('captureSnapshot error:', error);
     return res.status(500).json({ error: 'Failed to capture snapshot' });

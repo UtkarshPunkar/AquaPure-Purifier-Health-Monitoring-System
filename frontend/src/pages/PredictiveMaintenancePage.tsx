@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTelemetry } from '../context/TelemetryContext';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { api } from '../api/client';
@@ -171,75 +172,78 @@ export const PredictiveMaintenancePage: React.FC = () => {
       </div>
 
       {/* Schedule Modal */}
-      {isModalOpen && selectedPurifier && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="app-card max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b app-divider pb-3">
-              <h3 className="text-sm font-bold app-heading flex items-center gap-2">
-                <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
-                Schedule Maintenance Service
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="app-muted hover:text-slate-900 dark:hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleScheduleSubmit} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="form-label">Target Purifier</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`${selectedPurifier.purifierCode} (Risk: ${selectedPurifier.riskLevel})`}
-                  className="app-input font-mono bg-slate-100 dark:bg-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Service Type</label>
-                <select
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  className="app-input"
-                >
-                  <option value="FILTER_REPLACEMENT">RO Membrane & Carbon Filter Replacement</option>
-                  <option value="MEMBRANE_FLUSH">Pressure Line Flush & Sanitization</option>
-                  <option value="ROUTINE_CHECKUP">Routine Preventive Inspection</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label">Work Order Notes</label>
-                <textarea
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="app-input"
-                />
-              </div>
-
-              <div className="flex items-center justify-end space-x-2 pt-2 border-t app-divider">
+      {isModalOpen &&
+        selectedPurifier &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="app-card max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b app-divider pb-3">
+                <h3 className="text-sm font-bold app-heading flex items-center gap-2">
+                  <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
+                  Schedule Maintenance Service
+                </h3>
                 <button
-                  type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="secondary-button"
+                  className="app-muted hover:text-slate-900 dark:hover:text-white"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="primary-button"
-                >
-                  Confirm Work Order
+                  ✕
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleScheduleSubmit} className="space-y-4 text-xs font-sans">
+                <div>
+                  <label className="form-label">Target Purifier</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${selectedPurifier.purifierCode} (Risk: ${selectedPurifier.riskLevel})`}
+                    className="app-input font-mono bg-slate-100 dark:bg-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Service Type</label>
+                  <select
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value)}
+                    className="app-input"
+                  >
+                    <option value="FILTER_REPLACEMENT">RO Membrane & Carbon Filter Replacement</option>
+                    <option value="MEMBRANE_FLUSH">Pressure Line Flush & Sanitization</option>
+                    <option value="ROUTINE_CHECKUP">Routine Preventive Inspection</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Work Order Notes</label>
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="app-input"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-2 pt-2 border-t app-divider">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="secondary-button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="primary-button"
+                  >
+                    Confirm Work Order
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

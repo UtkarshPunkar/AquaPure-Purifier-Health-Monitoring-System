@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { simulationEngine } from '../engine/simulation.engine';
 import { runPredictiveAnalysis } from '../engine/predictive.engine';
@@ -210,7 +210,14 @@ export async function getPurifierReadings(req: Request, res: Response) {
       orderBy: { timestamp: 'asc' },
     });
 
-    return res.json(readings);
+    // Downsample for chart responsiveness if dataset is large
+    let sampledReadings = readings;
+    if (readings.length > 80) {
+      const step = Math.ceil(readings.length / 60);
+      sampledReadings = readings.filter((_, idx) => idx % step === 0 || idx === readings.length - 1);
+    }
+
+    return res.json(sampledReadings);
   } catch (error) {
     console.error('getPurifierReadings error:', error);
     return res.status(500).json({ error: 'Failed to fetch sensor history' });

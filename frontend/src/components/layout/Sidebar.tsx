@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           />
           <div className="min-w-0">
             <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-              AquaPure Pro
+              AquaPure
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-tight">
               Smart IoT Water Safety

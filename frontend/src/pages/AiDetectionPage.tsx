@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api/client';
 import { AiDetectionItem, Purifier } from '../types';
 import {
@@ -19,7 +20,6 @@ import {
   WifiOff,
   Maximize2,
   RefreshCw,
-  Sliders,
   Check,
   Globe,
   HelpCircle,
@@ -40,11 +40,8 @@ export const AiDetectionPage: React.FC = () => {
   const [selectedPurifierId, setSelectedPurifierId] = useState<string>('');
   const [cameraIp, setCameraIp] = useState<string>('192.168.4.1');
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [isDiscovering, setIsDiscovering] = useState<boolean>(false);
   const [connectMessage, setConnectMessage] = useState<string | null>(null);
   const [streamKey, setStreamKey] = useState<number>(Date.now());
-  const [useDirectStream, setUseDirectStream] = useState<boolean>(false);
-  const [showConfigBar, setShowConfigBar] = useState<boolean>(false);
   const [isStreamStalled, setIsStreamStalled] = useState<boolean>(false);
 
   const failedProbesRef = useRef<number>(0);
@@ -129,27 +126,6 @@ export const AiDetectionPage: React.FC = () => {
     }
   };
 
-  const handleAutoDiscover = async () => {
-    try {
-      setIsDiscovering(true);
-      setConnectMessage('Scanning local network & AP (192.168.4.1, 192.168.43.x, 192.168.1.x)...');
-      const res = await api.autoDiscoverCamera();
-      if (res.found && res.ipAddress) {
-        failedProbesRef.current = 0;
-        setCameraIp(res.ipAddress);
-        setIsCameraOnline(true);
-        setConnectMessage(res.message || `Discovered ESP32-CAM at ${res.ipAddress}!`);
-        setStreamKey(Date.now());
-      } else {
-        setConnectMessage(res.message || 'No active ESP32-CAM found. Connect to AquaPure-CAM Wi-Fi.');
-      }
-    } catch {
-      setConnectMessage('Auto-discovery encountered an error.');
-    } finally {
-      setIsDiscovering(false);
-    }
-  };
-
   const handleRefreshStream = () => {
     setStreamKey(Date.now());
     setIsStreamStalled(false);
@@ -186,15 +162,7 @@ export const AiDetectionPage: React.FC = () => {
     return matchesRisk && matchesPurifier && matchesSearch;
   });
 
-  // KPIs
-  const totalScans = detections.length;
-  const criticalContaminants = detections.filter((d) => d.riskLevel === 'CRITICAL').length;
-  const warnings = detections.filter((d) => d.riskLevel === 'WARNING').length;
-  const safePurityScans = detections.filter((d) => d.riskLevel === 'SAFE').length;
-
-  const streamSrc = useDirectStream
-    ? `http://${cameraIp}/stream`
-    : `/api/camera/stream/ESP32-CAM-1?t=${streamKey}`;
+  const streamSrc = `/api/camera/stream/ESP32-CAM-1?t=${streamKey}`;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -205,22 +173,10 @@ export const AiDetectionPage: React.FC = () => {
             <ScanEye className="text-sky-600 dark:text-sky-400" size={24} />
             AI Contaminant Vision & Optical Inspection
           </h1>
-          <p className="text-xs sm:text-sm app-muted mt-0.5">
-            Real-time microscopic classification of water particulate, micro-algae, and foreign organisms via ESP32-CAM OV2640.
-          </p>
         </div>
 
         {/* Live Camera Node Indicator & Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowConfigBar(!showConfigBar)}
-            className="secondary-button text-xs flex items-center gap-1.5 py-1.5 px-3"
-            title="Configure Camera IP"
-          >
-            <Sliders size={13} />
-            <span>Camera Config</span>
-          </button>
-
           <button
             onClick={handleRefreshStream}
             className="secondary-button text-xs flex items-center gap-1.5 py-1.5 px-3"
@@ -245,7 +201,7 @@ export const AiDetectionPage: React.FC = () => {
       </div>
 
       {/* 2. ESP32-CAM Connection & IP Configuration Bar */}
-      <div className={`app-card p-4 space-y-3 transition-all ${showConfigBar || !isCameraOnline ? 'block' : 'hidden'}`}>
+      <div className={`app-card p-4 space-y-3 transition-all ${!isCameraOnline ? 'block' : 'hidden'}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b app-divider pb-2.5">
           <div className="flex items-center gap-2">
             <Camera size={16} className="text-sky-600 dark:text-sky-400" />
@@ -290,27 +246,6 @@ export const AiDetectionPage: React.FC = () => {
             >
               <span>192.168.4.1 (AP Mode)</span>
             </button>
-
-            <button
-              onClick={handleAutoDiscover}
-              disabled={isDiscovering}
-              className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1.5"
-            >
-              <Search size={13} className={isDiscovering ? 'animate-spin text-sky-500' : ''} />
-              <span>{isDiscovering ? 'Scanning...' : 'Auto-Discover'}</span>
-            </button>
-
-            <button
-              onClick={() => setUseDirectStream(!useDirectStream)}
-              className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
-                useDirectStream
-                  ? 'border-sky-500 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-bold'
-                  : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-              }`}
-              title="Toggle Direct Device MJPEG stream vs Backend Proxy"
-            >
-              {useDirectStream ? 'Direct Device Stream' : 'Backend Proxy Stream'}
-            </button>
           </div>
         </div>
 
@@ -323,168 +258,126 @@ export const AiDetectionPage: React.FC = () => {
       </div>
 
       {/* 3. Top Banner: Live Camera Optical Inspection & Quick Scan Station */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Live Stream / Camera View Card */}
-        <div className="lg:col-span-2 app-card p-5 space-y-3">
-          <div className="flex items-center justify-between border-b app-divider pb-2.5">
-            <div className="flex items-center gap-2">
-              <Camera size={16} className="text-sky-600 dark:text-sky-400" />
-              <h3 className="text-sm font-bold app-heading">ESP32-CAM Live Optical Inspection Feed</h3>
-            </div>
-            <span className="text-[11px] font-mono text-slate-400">Target: WP-1 (EMTech 2nd Floor)</span>
+      <div className="app-card p-5 space-y-3">
+        <div className="flex items-center justify-between border-b app-divider pb-2.5">
+          <div className="flex items-center gap-2">
+            <Camera size={16} className="text-sky-600 dark:text-sky-400" />
+            <h3 className="text-sm font-bold app-heading">ESP32-CAM Live Optical Inspection Feed</h3>
           </div>
-
-          <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center shadow-inner group">
-            {isCameraOnline ? (
-              <>
-                {/* Live MJPEG Stream Element */}
-                <img
-                  key={`stream-${streamKey}-${useDirectStream}`}
-                  src={streamSrc}
-                  alt="Live ESP32-CAM Optical Stream"
-                  onLoad={() => setIsStreamStalled(false)}
-                  onError={() => {
-                    setIsStreamStalled(true);
-                  }}
-                  className="w-full h-full object-contain bg-black"
-                />
-
-                {/* Stalled Recovery Overlay */}
-                {isStreamStalled && (
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
-                    <div className="bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg">
-                      <Loader2 size={13} className="animate-spin text-amber-400" />
-                      <span>Synchronizing live feed...</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Overlay HUD */}
-                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5 pointer-events-none">
-                  <Radio size={11} className="text-rose-500 animate-pulse" />
-                  <span className="font-bold text-rose-400">LIVE FEED</span>
-                  <span className="text-white/40">|</span>
-                  <span>640x480 VGA</span>
-                  <span className="text-white/40">|</span>
-                  <span className="text-sky-400 font-semibold">{cameraIp}</span>
-                </div>
-
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-1 pointer-events-none">
-                  <ShieldCheck size={12} />
-                  <span>Optical Sensor Active</span>
-                </div>
-
-                {/* Bottom Overlay HUD */}
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                  <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
-                    Endpoint: <code className="text-sky-300">{useDirectStream ? `http://${cameraIp}/stream` : '/api/camera/stream'}</code>
-                  </div>
-                  <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-400">
-                    {new Date().toLocaleTimeString()}
-                  </div>
-                </div>
-              </>
-            ) : (
-              /* Offline Guidance Display */
-              <div className="p-6 text-center text-slate-400 space-y-3 max-w-md">
-                <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                  <Camera size={26} className="text-sky-500" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">ESP32-CAM Ready to Connect</div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Connect your computer to Wi-Fi <strong>AquaPure-CAM</strong> (or local hotspot) and click Connect below.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                  <button
-                    onClick={() => handleConnectCamera('192.168.4.1')}
-                    disabled={isConnecting}
-                    className="primary-button text-xs py-1.5 px-3.5 flex items-center gap-1.5 shadow-md"
-                  >
-                    <RefreshCw size={12} className={isConnecting ? 'animate-spin' : ''} />
-                    <span>Connect to 192.168.4.1</span>
-                  </button>
-
-                  <button
-                    onClick={handleAutoDiscover}
-                    disabled={isDiscovering}
-                    className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
-                  >
-                    <Search size={12} />
-                    <span>Auto-Discover</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedPurifierId}
-                onChange={(e) => setSelectedPurifierId(e.target.value)}
-                className="app-input text-xs font-semibold py-1.5 px-3"
-              >
-                {purifiers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.purifierCode} &mdash; {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefreshStream}
-                className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
-                title="Refresh live video stream"
-              >
-                <RefreshCw size={13} />
-                <span>Refresh</span>
-              </button>
-
-              <button
-                onClick={() => handleRunScan()}
-                disabled={isScanning}
-                className="primary-button text-xs py-1.5 px-4 flex items-center gap-1.5 shadow-md"
-              >
-                <ScanEye size={14} className={isScanning ? 'animate-spin' : ''} />
-                <span>{isScanning ? 'Analyzing Optical Clarity...' : 'Capture & Run AI Vision Scan'}</span>
-              </button>
-            </div>
-          </div>
+          <span className="text-[11px] font-mono text-slate-400">Target: WP-1 (EMTech 2nd Floor)</span>
         </div>
 
-        {/* Quick Optical Audit Summary */}
-        <div className="space-y-3">
-          <div className="app-card p-4 space-y-2">
-            <span className="text-[11px] app-muted block font-medium">Total AI Optical Scans</span>
-            <span className="text-2xl font-bold font-mono app-heading">{totalScans}</span>
-          </div>
+        <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center shadow-inner group">
+          {isCameraOnline ? (
+            <>
+              {/* Live MJPEG Stream Element */}
+              <img
+                key={`stream-${streamKey}`}
+                src={streamSrc}
+                alt="Live ESP32-CAM Optical Stream"
+                onLoad={() => setIsStreamStalled(false)}
+                onError={() => {
+                  setIsStreamStalled(true);
+                }}
+                className="w-full h-full object-contain bg-black"
+              />
 
-          <div className="app-card p-4 space-y-2 border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20">
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block font-bold">Clean Water Baseline</span>
-            <span className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">{safePurityScans}</span>
-          </div>
+              {/* Stalled Recovery Overlay */}
+              {isStreamStalled && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+                  <div className="bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg">
+                    <Loader2 size={13} className="animate-spin text-amber-400" />
+                    <span>Synchronizing live feed...</span>
+                  </div>
+                </div>
+              )}
 
-          <div className="app-card p-4 space-y-2 border-rose-500/30 bg-rose-50/40 dark:bg-rose-950/20">
-            <span className="text-[11px] text-rose-700 dark:text-rose-400 block font-bold">Contaminant Alerts</span>
-            <span className="text-2xl font-bold font-mono text-rose-700 dark:text-rose-400">{criticalContaminants + warnings}</span>
-          </div>
+              {/* Top Overlay HUD */}
+              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5 pointer-events-none">
+                <Radio size={11} className="text-rose-500 animate-pulse" />
+                <span className="font-bold text-rose-400">LIVE FEED</span>
+                <span className="text-white/40">|</span>
+                <span>640x480 VGA</span>
+                <span className="text-white/40">|</span>
+                <span className="text-sky-400 font-semibold">{cameraIp}</span>
+              </div>
 
-          <div className="app-card p-4 space-y-2 text-xs">
-            <div className="font-bold app-heading flex items-center gap-1.5">
-              <Sparkles size={13} className="text-sky-500" />
-              <span>Supported Vision Classes</span>
+              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-1 pointer-events-none">
+                <ShieldCheck size={12} />
+                <span>Optical Sensor Active</span>
+              </div>
+
+              {/* Bottom Overlay HUD */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
+                  Endpoint: <code className="text-sky-300">/api/camera/stream</code>
+                </div>
+                <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-400">
+                  {new Date().toLocaleTimeString()}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Offline Guidance Display */
+            <div className="p-6 text-center text-slate-400 space-y-3 max-w-md">
+              <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                <Camera size={26} className="text-sky-500" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">ESP32-CAM Ready to Connect</div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Connect your computer to Wi-Fi <strong>AquaPure-CAM</strong> (or local hotspot) and click Connect below.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <button
+                  onClick={() => handleConnectCamera('192.168.4.1')}
+                  disabled={isConnecting}
+                  className="primary-button text-xs py-1.5 px-3.5 flex items-center gap-1.5 shadow-md"
+                >
+                  <RefreshCw size={12} className={isConnecting ? 'animate-spin' : ''} />
+                  <span>Connect to 192.168.4.1</span>
+                </button>
+              </div>
             </div>
-            <ul className="text-[11px] app-muted space-y-1 list-disc list-inside">
-              <li>Clean Potable Baseline (100% Clarity)</li>
-              <li>Micro-Algae Bloom Filament</li>
-              <li>Insect & Micro-Debris Particulate</li>
-              <li>Microscopic Nematode Larvae</li>
-            </ul>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedPurifierId}
+              onChange={(e) => setSelectedPurifierId(e.target.value)}
+              className="app-input text-xs font-semibold py-1.5 px-3"
+            >
+              {purifiers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.purifierCode} &mdash; {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRefreshStream}
+              className="secondary-button text-xs py-1.5 px-3 flex items-center gap-1"
+              title="Refresh live video stream"
+            >
+              <RefreshCw size={13} />
+              <span>Refresh Stream</span>
+            </button>
+
+            <button
+              onClick={() => handleRunScan()}
+              disabled={isScanning}
+              className="primary-button text-xs py-1.5 px-4 flex items-center gap-1.5 shadow-md bg-sky-600 hover:bg-sky-500 text-white font-bold"
+              title="Capture live frame from camera and run dynamic AI computer vision scan"
+            >
+              <ScanEye size={14} className={isScanning ? 'animate-spin' : ''} />
+              <span>{isScanning ? 'Analyzing Optical Clarity...' : 'Capture & Run AI Vision Scan'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -583,9 +476,26 @@ export const AiDetectionPage: React.FC = () => {
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                        {d.boundingBoxes && d.boundingBoxes.length > 0 && (
-                          <div className="absolute inset-1 border border-dashed border-rose-500 rounded pointer-events-none" />
-                        )}
+                        {d.boundingBoxes && d.boundingBoxes.length > 0 ? (
+                          d.boundingBoxes.map((b, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                left: `${(b.x / 640) * 100}%`,
+                                top: `${(b.y / 480) * 100}%`,
+                                width: `${Math.max(15, (b.w / 640) * 100)}%`,
+                                height: `${Math.max(15, (b.h / 480) * 100)}%`,
+                              }}
+                              className={`absolute border border-dashed rounded pointer-events-none ${
+                                d.riskLevel === 'CRITICAL'
+                                  ? 'border-rose-500 bg-rose-500/20'
+                                  : d.riskLevel === 'WARNING'
+                                  ? 'border-amber-500 bg-amber-500/20'
+                                  : 'border-emerald-500 bg-emerald-500/20'
+                              }`}
+                            />
+                          ))
+                        ) : null}
                       </div>
                     </td>
 
@@ -635,208 +545,242 @@ export const AiDetectionPage: React.FC = () => {
       </div>
 
       {/* 6. View Details Modal with Real Captured Frame & Live Feed Toggle */}
-      {selectedDetection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <ScanEye size={18} className="text-sky-600 dark:text-sky-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  AI Optical Contaminant Inspection Detail
-                </h3>
-              </div>
-
-              {/* View Switcher Pill */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
-                <button
-                  onClick={() => setViewMode('SNAPSHOT')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
-                    viewMode === 'SNAPSHOT'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Captured Frame
-                </button>
-                <button
-                  onClick={() => setViewMode('LIVE')}
-                  className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition-all ${
-                    viewMode === 'LIVE'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  {isCameraOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                  Live Camera
-                </button>
-              </div>
-
-              <button
-                onClick={() => setSelectedDetection(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white ml-2"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-              {/* High-Res Image Canvas */}
-              <div className="relative w-full aspect-video rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shadow-inner">
-                {viewMode === 'LIVE' ? (
-                  isCameraOnline ? (
-                    <>
-                      <img
-                        key={`modal-stream-${streamKey}-${useDirectStream}`}
-                        src={streamSrc}
-                        alt="ESP32-CAM Live Feed"
-                        className="w-full h-full object-contain bg-black"
-                      />
-                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5">
-                        <Radio size={11} className="text-rose-500 animate-pulse" />
-                        <span className="font-bold text-rose-400">LIVE FEED</span>
-                        <span className="text-white/40">|</span>
-                        <span>640x480 VGA</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center p-6 text-slate-400 space-y-3">
-                      <WifiOff size={28} className="mx-auto text-slate-500" />
-                      <div className="text-xs font-bold text-white">ESP32-CAM Ready to Stream</div>
-                      <p className="text-[11px] text-slate-400 max-w-sm">
-                        Connect to Wi-Fi <strong>AquaPure-CAM</strong> (or your hotspot) to activate live stream.
-                      </p>
-                      <button
-                        onClick={() => handleConnectCamera('192.168.4.1')}
-                        className="primary-button text-xs py-1.5 px-3"
-                      >
-                        Connect to 192.168.4.1
-                      </button>
-                    </div>
-                  )
-                ) : (
-                  /* Captured Snapshot View */
-                  <>
-                    <img
-                      src={selectedDetection.capturedImageUrl || `/api/camera/snapshot-image/${selectedDetection.id}`}
-                      alt={selectedDetection.detectedObject}
-                      className="w-full h-full object-contain bg-black"
-                    />
-
-                    {/* AI Bounding Box Overlay if Detected */}
-                    {selectedDetection.boundingBoxes && selectedDetection.boundingBoxes.length > 0 ? (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="relative border-2 border-rose-500 bg-rose-500/15 rounded-lg p-3 w-56 h-40 flex flex-col justify-between shadow-xl shadow-rose-500/30 animate-pulse">
-                          <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded self-start shadow-xs">
-                            {selectedDetection.detectedObject} ({selectedDetection.confidence.toFixed(1)}%)
-                          </span>
-                          <span className="text-[9px] font-mono text-rose-300 self-end">
-                            [ROI: Active Focal Window]
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="absolute bottom-3 left-3 z-10 bg-emerald-950/80 backdrop-blur-md border border-emerald-700/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                        <CheckCircle2 size={16} />
-                        <span>Optical Clarity Verified (100% Purity Baseline)</span>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Top overlay badge */}
-                <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-slate-700">
-                    Resolution: 640x480 VGA
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-sky-400 border border-slate-700">
-                    ESP32-CAM OV2640
-                  </span>
-                </div>
-              </div>
-
-              {/* Metadata Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 block">Detected Class</span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    {selectedDetection.detectedObject}
-                  </span>
+      {selectedDetection &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <ScanEye size={18} className="text-sky-600 dark:text-sky-400" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    AI Optical Contaminant Inspection Detail
+                  </h3>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 block">AI Confidence</span>
-                  <span className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400 mt-0.5 block">
-                    {selectedDetection.confidence.toFixed(1)}%
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 block">Risk Evaluation</span>
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
-                      selectedDetection.riskLevel === 'SAFE'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
-                        : selectedDetection.riskLevel === 'WARNING'
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
-                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
+                {/* View Switcher Pill */}
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
+                  <button
+                    onClick={() => setViewMode('SNAPSHOT')}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                      viewMode === 'SNAPSHOT'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
-                    {selectedDetection.riskLevel}
-                  </span>
+                    Captured Frame
+                  </button>
+                  <button
+                    onClick={() => setViewMode('LIVE')}
+                    className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition-all ${
+                      viewMode === 'LIVE'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    {isCameraOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                    Live Camera
+                  </button>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 block">Purifier Node</span>
-                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    {selectedDetection.purifier?.purifierCode || 'WP-1'}
+                <button
+                  onClick={() => setSelectedDetection(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-white ml-2"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
+                {/* High-Res Image Canvas */}
+                <div className="relative w-full aspect-video rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shadow-inner">
+                  {viewMode === 'LIVE' ? (
+                    isCameraOnline ? (
+                      <>
+                        <img
+                          key={`modal-stream-${streamKey}`}
+                          src={streamSrc}
+                          alt="ESP32-CAM Live Feed"
+                          className="w-full h-full object-contain bg-black"
+                        />
+                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-white flex items-center gap-1.5">
+                          <Radio size={11} className="text-rose-500 animate-pulse" />
+                          <span className="font-bold text-rose-400">LIVE FEED</span>
+                          <span className="text-white/40">|</span>
+                          <span>640x480 VGA</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-6 text-slate-400 space-y-3">
+                        <WifiOff size={28} className="mx-auto text-slate-500" />
+                        <div className="text-xs font-bold text-white">ESP32-CAM Ready to Stream</div>
+                        <p className="text-[11px] text-slate-400 max-w-sm">
+                          Connect to Wi-Fi <strong>AquaPure-CAM</strong> (or your hotspot) to activate live stream.
+                        </p>
+                        <button
+                          onClick={() => handleConnectCamera('192.168.4.1')}
+                          className="primary-button text-xs py-1.5 px-3"
+                        >
+                          Connect to 192.168.4.1
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    /* Captured Snapshot View */
+                    <>
+                      <img
+                        src={selectedDetection.capturedImageUrl || `/api/camera/snapshot-image/${selectedDetection.id}`}
+                        alt={selectedDetection.detectedObject}
+                        className="w-full h-full object-contain bg-black"
+                      />
+
+                      {/* AI Dynamic Bounding Box Overlay if Detected */}
+                      {selectedDetection.boundingBoxes && selectedDetection.boundingBoxes.length > 0 ? (
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                          {selectedDetection.boundingBoxes.map((box, bIdx) => {
+                            const isCrit = selectedDetection.riskLevel === 'CRITICAL';
+                            const isWarn = selectedDetection.riskLevel === 'WARNING';
+                            const leftPct = (box.x / 640) * 100;
+                            const topPct = (box.y / 480) * 100;
+                            const widthPct = (box.w / 640) * 100;
+                            const heightPct = (box.h / 480) * 100;
+
+                            return (
+                              <div
+                                key={bIdx}
+                                style={{
+                                  left: `${Math.max(0, Math.min(92, leftPct))}%`,
+                                  top: `${Math.max(0, Math.min(92, topPct))}%`,
+                                  width: `${Math.max(10, Math.min(100 - leftPct, widthPct))}%`,
+                                  height: `${Math.max(10, Math.min(100 - topPct, heightPct))}%`,
+                                }}
+                                className={`absolute border-2 ${
+                                  isCrit
+                                    ? 'border-rose-500 bg-rose-500/20 shadow-lg shadow-rose-500/40'
+                                    : isWarn
+                                    ? 'border-amber-500 bg-amber-500/20 shadow-lg shadow-amber-500/40'
+                                    : 'border-emerald-500 bg-emerald-500/20 shadow-lg shadow-emerald-500/40'
+                                } rounded-lg flex flex-col justify-between p-1.5 animate-pulse`}
+                              >
+                                <div className="flex items-center gap-1 self-start">
+                                  <span
+                                    className={`text-[10px] font-mono font-bold text-white px-2 py-0.5 rounded shadow-xs ${
+                                      isCrit ? 'bg-rose-600' : isWarn ? 'bg-amber-600' : 'bg-emerald-600'
+                                    }`}
+                                  >
+                                    {box.label || `${selectedDetection.detectedObject} (${selectedDetection.confidence.toFixed(1)}%)`}
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-mono text-white/90 bg-black/70 px-1.5 py-0.5 rounded self-end">
+                                  [{Math.round(box.w)}x{Math.round(box.h)}px]
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="absolute bottom-3 left-3 z-10 bg-emerald-950/80 backdrop-blur-md border border-emerald-700/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                          <CheckCircle2 size={16} />
+                          <span>Optical Clarity Verified (100% Potable Baseline)</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Top overlay badge */}
+                  <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-slate-700">
+                      Resolution: 640x480 VGA
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md text-[10px] font-mono text-sky-400 border border-slate-700">
+                      ESP32-CAM OV2640
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metadata Breakdown */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 block">Detected Class</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
+                      {selectedDetection.detectedObject}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 block">AI Confidence</span>
+                    <span className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400 mt-0.5 block">
+                      {selectedDetection.confidence.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 block">Risk Evaluation</span>
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
+                        selectedDetection.riskLevel === 'SAFE'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                          : selectedDetection.riskLevel === 'WARNING'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
+                      }`}
+                    >
+                      {selectedDetection.riskLevel}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 block">Purifier Node</span>
+                    <span className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-0.5 block">
+                      {selectedDetection.purifier?.purifierCode || 'WP-1'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Timestamp & Location */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                  <div>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Timestamp: </span>
+                    {new Date(selectedDetection.timestamp).toLocaleString()}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Location: </span>
+                    {selectedDetection.purifier?.building} &bull; {selectedDetection.purifier?.location}
+                  </div>
+                </div>
+
+                {/* Recommended Action */}
+                <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 text-xs space-y-1">
+                  <span className="font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                    <Sparkles size={12} /> Recommended Action & Protocol:
                   </span>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium">
+                    {selectedDetection.recommendation}
+                  </p>
                 </div>
               </div>
 
-              {/* Timestamp & Location */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-600 dark:text-slate-300 space-y-1">
-                <div>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">Timestamp: </span>
-                  {new Date(selectedDetection.timestamp).toLocaleString()}
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">Location: </span>
-                  {selectedDetection.purifier?.building} &bull; {selectedDetection.purifier?.location}
-                </div>
-              </div>
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between shrink-0">
+                <button
+                  onClick={() => handleRunScan()}
+                  disabled={isScanning}
+                  className="secondary-button text-xs py-2 px-3 flex items-center gap-1.5"
+                >
+                  <ScanEye size={13} className={isScanning ? 'animate-spin' : ''} />
+                  <span>Run New Scan</span>
+                </button>
 
-              {/* Recommended Action */}
-              <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 text-xs space-y-1">
-                <span className="font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
-                  <Sparkles size={12} /> Recommended Action & Protocol:
-                </span>
-                <p className="text-slate-700 dark:text-slate-300 font-medium">
-                  {selectedDetection.recommendation}
-                </p>
+                <button
+                  onClick={() => setSelectedDetection(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold"
+                >
+                  Close Details
+                </button>
               </div>
             </div>
-
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
-              <button
-                onClick={() => handleRunScan()}
-                disabled={isScanning}
-                className="secondary-button text-xs py-2 px-3 flex items-center gap-1.5"
-              >
-                <ScanEye size={13} className={isScanning ? 'animate-spin' : ''} />
-                <span>Run New Scan</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedDetection(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold"
-              >
-                Close Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

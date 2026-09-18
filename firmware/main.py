@@ -303,17 +303,20 @@ def update_local_ui(data, is_online):
 # ==============================================================================
 # 8. MAIN EXECUTION LOOP
 # ==============================================================================
+# 8. HIGH-SPEED REAL-TIME EXECUTION LOOP (Low Latency Mode)
+# ==============================================================================
 print("\n" + "="*50)
-print(" 💧 AQUAPURE HARDWARE NODE ACTIVE")
+print(" 💧 AQUAPURE REAL-TIME SENSOR NODE ACTIVE")
 print("="*50)
 print(f"Target Purifier: {PURIFIER_CODE} ({DEVICE_ID})")
-print("Streaming Mode : Dual (USB Serial + Wi-Fi HTTP)")
+print("Streaming Mode : High-Speed Live Telemetry (Zero Delay)")
 print("="*50 + "\n")
 
-connect_wifi(timeout_sec=5)
+connect_wifi(timeout_sec=3)
 
 packet_count = 0
 last_wifi_retry = time.time()
+last_wifi_post = 0
 
 while True:
     try:
@@ -335,31 +338,32 @@ while True:
             "flowRate": data["flowRate"],
         }
 
-        # 1. ALWAYS Output Structured JSON Line to USB Serial (for Direct Laptop USB Bridge)
+        # 1. ALWAYS Output Structured JSON Line to USB Serial (Instant 0ms latency for USB Bridge)
         print("JSON_DATA:" + ujson.dumps(payload))
 
-        # 2. Print readable logs to Thonny / Serial Console
-        print(f"[{PURIFIER_CODE}] #{packet_count} | pH: {data['ph']} | TDS: {data['tds']} ppm | Tur: {data['turbidity']} NTU | T: {data['temperature']}C")
+        # 2. Print readable summary line for Thonny / Serial Monitor
+        print(f"[{PURIFIER_CODE}] #{packet_count} | pH: {data['ph']:.2f} | TDS: {data['tds']:.1f} ppm | Tur: {data['turbidity']:.2f} NTU | T: {data['temperature']:.1f}C")
 
-        # 3. Send via Wi-Fi HTTP POST if online
-        if is_online and urequests:
+        # 3. Non-blocking Wi-Fi HTTP POST (throttled to avoid stalling the high-speed serial loop)
+        now = time.time()
+        if is_online and urequests and (now - last_wifi_post >= 5):
+            last_wifi_post = now
             for url in BACKEND_URLS:
                 try:
                     res = urequests.post(url, json=payload, headers={"Content-Type": "application/json"})
                     if res.status_code in [200, 201]:
-                        print(f"✓ HTTP Posted to {url}")
                         res.close()
                         break
                     res.close()
                 except Exception:
                     pass
         elif not is_online:
-            if time.time() - last_wifi_retry > 20:
-                last_wifi_retry = time.time()
-                connect_wifi(timeout_sec=3)
+            if now - last_wifi_retry > 30:
+                last_wifi_retry = now
+                connect_wifi(timeout_sec=2)
 
-        time.sleep(3)
+        time.sleep(0.5)
 
     except Exception as err:
         print(f"Loop iteration notice: {err}")
-        time.sleep(2)
+        time.sleep(0.5)

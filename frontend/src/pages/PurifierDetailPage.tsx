@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -63,7 +64,12 @@ export const PurifierDetailPage: React.FC = () => {
       setPurifier(p);
 
       const readings = await api.getPurifierReadings(id, timeframe);
-      const formatted = readings.map((r: any) => ({
+      let sampled = Array.isArray(readings) ? readings : [];
+      if (sampled.length > 80) {
+        const step = Math.ceil(sampled.length / 60);
+        sampled = sampled.filter((_: any, idx: number) => idx % step === 0 || idx === sampled.length - 1);
+      }
+      const formatted = sampled.map((r: any) => ({
         ...r,
         formattedTime:
           timeframe === '24h'
@@ -121,6 +127,42 @@ export const PurifierDetailPage: React.FC = () => {
     }
   };
 
+  const isInactive = purifier ? (purifier.status === 'INACTIVE' || purifier.status === 'OFFLINE') : false;
+
+  // Memoized chart data: if unit is offline/inactive, flatline all parameters to 0
+  const displayChartData = useMemo(() => {
+    if (!isInactive) {
+      return historyReadings;
+    }
+    if (historyReadings.length === 0) {
+      const defaultLabels =
+        timeframe === '24h'
+          ? ['12:00 AM', '04:00 AM', '08:00 AM', '12:00 PM', '04:00 PM', '08:00 PM', '11:59 PM']
+          : timeframe === '7d'
+          ? ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7']
+          : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+
+      return defaultLabels.map((time) => ({
+        formattedTime: time,
+        tds: 0,
+        turbidity: 0,
+        ph: 0,
+        temperature: 0,
+        wqiScore: 0,
+        flowRate: 0,
+      }));
+    }
+    return historyReadings.map((reading) => ({
+      ...reading,
+      tds: 0,
+      turbidity: 0,
+      ph: 0,
+      temperature: 0,
+      wqiScore: 0,
+      flowRate: 0,
+    }));
+  }, [historyReadings, isInactive, timeframe]);
+
   if (isLoading && !purifier) {
     return (
       <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
@@ -159,8 +201,6 @@ export const PurifierDetailPage: React.FC = () => {
   const tooltipBg = isDark ? '#0f172a' : '#ffffff';
   const tooltipBorder = isDark ? '#334155' : '#e2e8f0';
   const tooltipText = isDark ? '#f8fafc' : '#0f172a';
-
-  const isInactive = purifier.status === 'INACTIVE' || purifier.status === 'OFFLINE';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -250,18 +290,20 @@ export const PurifierDetailPage: React.FC = () => {
             <Droplets size={14} className="text-cyan-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.tds.toFixed(0)} <span className="text-xs font-normal text-slate-400">ppm</span>
+            {isInactive ? '--' : `${tel.tds.toFixed(0)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'ppm'}</span>
           </div>
           <div
             className={`text-[10px] font-bold mt-1 ${
-              tel.tds <= 300
+              isInactive
+                ? 'text-slate-400'
+                : tel.tds <= 300
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : tel.tds <= 400
                 ? 'text-amber-600 dark:text-amber-400'
                 : 'text-rose-600 dark:text-rose-400'
             }`}
           >
-            {tel.tds <= 300 ? 'Safe Potable' : tel.tds <= 400 ? 'Warning' : 'Critical TDS'}
+            {isInactive ? 'Standby (Offline)' : tel.tds <= 300 ? 'Safe Potable' : tel.tds <= 400 ? 'Warning' : 'Critical TDS'}
           </div>
         </div>
 
@@ -272,14 +314,18 @@ export const PurifierDetailPage: React.FC = () => {
             <Waves size={14} className="text-teal-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.turbidity.toFixed(2)} <span className="text-xs font-normal text-slate-400">NTU</span>
+            {isInactive ? '--' : `${tel.turbidity.toFixed(2)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'NTU'}</span>
           </div>
           <div
             className={`text-[10px] font-bold mt-1 ${
-              tel.turbidity <= 1.0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+              isInactive
+                ? 'text-slate-400'
+                : tel.turbidity <= 1.0
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
             }`}
           >
-            {tel.turbidity <= 1.0 ? 'Clear Standard' : 'Elevated Turbidity'}
+            {isInactive ? 'Standby (Offline)' : tel.turbidity <= 1.0 ? 'Clear Standard' : 'Elevated Turbidity'}
           </div>
         </div>
 
@@ -290,10 +336,10 @@ export const PurifierDetailPage: React.FC = () => {
             <Thermometer size={14} className="text-amber-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.temperature.toFixed(1)} <span className="text-xs font-normal text-slate-400">°C</span>
+            {isInactive ? '--' : `${tel.temperature.toFixed(1)} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : '°C'}</span>
           </div>
-          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            Nominal Range
+          <div className={`text-[10px] font-bold mt-1 ${isInactive ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {isInactive ? 'Standby (Offline)' : 'Nominal Range'}
           </div>
         </div>
 
@@ -304,10 +350,10 @@ export const PurifierDetailPage: React.FC = () => {
             <Activity size={14} className="text-indigo-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {tel.flowRate.toFixed(2)} <span className="text-xs font-normal text-slate-400">L/min</span>
+            {isInactive ? '0.00' : tel.flowRate.toFixed(2)} <span className="text-xs font-normal text-slate-400">L/min</span>
           </div>
-          <div className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mt-1">
-            {tel.flowRate >= 1.5 ? 'Active Dispense' : tel.flowRate > 0.3 ? 'Low Flow' : 'Standby / Idle'}
+          <div className={`text-[10px] font-bold mt-1 ${isInactive ? 'text-slate-400' : 'text-sky-600 dark:text-sky-400'}`}>
+            {isInactive ? 'Standby (Offline)' : tel.flowRate >= 1.5 ? 'Active Dispense' : tel.flowRate > 0.3 ? 'Low Flow' : 'Standby / Idle'}
           </div>
         </div>
 
@@ -318,18 +364,22 @@ export const PurifierDetailPage: React.FC = () => {
             <Gauge size={14} className="text-purple-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {filter ? `${filter.healthScore.toFixed(0)}%` : 'N/A'}
+            {isInactive ? '--' : filter ? `${filter.healthScore.toFixed(0)}%` : 'N/A'}
           </div>
           <div
             className={`text-[10px] font-bold mt-1 ${
-              (filter?.healthScore ?? 100) >= 70
+              isInactive
+                ? 'text-slate-400'
+                : (filter?.healthScore ?? 100) >= 70
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : (filter?.healthScore ?? 100) >= 35
                 ? 'text-amber-600 dark:text-amber-400'
                 : 'text-rose-600 dark:text-rose-400'
             }`}
           >
-            {(filter?.healthScore ?? 100) >= 70
+            {isInactive
+              ? 'Standby (Offline)'
+              : (filter?.healthScore ?? 100) >= 70
               ? 'Healthy'
               : (filter?.healthScore ?? 100) >= 35
               ? 'Replace Soon'
@@ -344,7 +394,10 @@ export const PurifierDetailPage: React.FC = () => {
             <Calendar size={14} className="text-rose-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
-            {filter?.estimatedRemainingLifeDays ?? 45} <span className="text-xs font-normal text-slate-400">Days</span>
+            {isInactive ? '--' : `${filter?.estimatedRemainingLifeDays ?? 45} `}<span className="text-xs font-normal text-slate-400">{isInactive ? '' : 'Days'}</span>
+          </div>
+          <div className="text-[10px] font-bold text-slate-400 mt-1">
+            {isInactive ? 'Standby (Offline)' : 'Estimated Duration'}
           </div>
         </div>
       </div>
@@ -371,16 +424,18 @@ export const PurifierDetailPage: React.FC = () => {
 
           <div className="my-2">
             <GaugeChart
-              value={tel.wqiScore}
+              value={isInactive ? 0 : tel.wqiScore}
               title="Combined Score"
-              subtitle={tel.wqiStatus}
+              subtitle={isInactive ? 'Standby (Offline)' : tel.wqiStatus}
               size={160}
-              unit="/100"
+              unit={isInactive ? '' : '/100'}
             />
           </div>
 
           <div className="w-full text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl text-center leading-relaxed">
-            {tel.wqiScore >= 85
+            {isInactive
+              ? 'Hardware currently offline or standby. Connect Raspberry Pi Pico W to stream live telemetry.'
+              : tel.wqiScore >= 85
               ? 'Optimal drinking water compliance with safety guidelines.'
               : tel.wqiScore >= 65
               ? 'Acceptable potability with early mineral saturation.'
@@ -393,9 +448,16 @@ export const PurifierDetailPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Historical Sensor Trends
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Historical Sensor Trends
+              </h3>
+              {isInactive && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold border border-slate-200 dark:border-slate-700">
+                  Standby (Offline - 0 Baseline)
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Interactive time-series curves for pH, TDS, Turbidity, and Temperature.
             </p>
@@ -448,7 +510,7 @@ export const PurifierDetailPage: React.FC = () => {
         <div className="h-64 sm:h-72 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
             {selectedChart === 'tds' ? (
-              <AreaChart data={historyReadings}>
+              <AreaChart data={displayChartData}>
                 <defs>
                   <linearGradient id="tdsGrad2" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0284c7" stopOpacity={0.3} />
@@ -457,39 +519,39 @@ export const PurifierDetailPage: React.FC = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} domain={['dataMin - 20', 'dataMax + 20']} />
+                <YAxis stroke={textStroke} fontSize={11} domain={isInactive ? [0, 500] : ['dataMin - 20', 'dataMax + 20']} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Area type="monotone" dataKey="tds" stroke="#0284c7" strokeWidth={2} fillOpacity={1} fill="url(#tdsGrad2)" name="TDS (ppm)" />
               </AreaChart>
             ) : selectedChart === 'turbidity' ? (
-              <LineChart data={historyReadings}>
+              <LineChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} domain={[0, 'dataMax + 0.5']} />
+                <YAxis stroke={textStroke} fontSize={11} domain={isInactive ? [0, 5] : [0, 'dataMax + 0.5']} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Line type="monotone" dataKey="turbidity" stroke="#f59e0b" strokeWidth={2} dot={false} name="Turbidity (NTU)" />
               </LineChart>
             ) : selectedChart === 'ph' ? (
-              <LineChart data={historyReadings}>
+              <LineChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} domain={[6.0, 8.5]} />
+                <YAxis stroke={textStroke} fontSize={11} domain={isInactive ? [0, 14] : [6.0, 8.5]} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Line type="monotone" dataKey="ph" stroke="#10b981" strokeWidth={2} dot={false} name="pH Value" />
               </LineChart>
             ) : selectedChart === 'temp' ? (
-              <LineChart data={historyReadings}>
+              <LineChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} domain={[15, 35]} />
+                <YAxis stroke={textStroke} fontSize={11} domain={isInactive ? [0, 50] : [15, 35]} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Line type="monotone" dataKey="temperature" stroke="#f43f5e" strokeWidth={2} dot={false} name="Temperature (°C)" />
               </LineChart>
             ) : (
-              <LineChart data={historyReadings}>
+              <LineChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="formattedTime" stroke={textStroke} fontSize={11} />
-                <YAxis stroke={textStroke} fontSize={11} />
+                <YAxis stroke={textStroke} fontSize={11} domain={isInactive ? [0, 100] : undefined} />
                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', fontSize: '12px', color: tooltipText }} />
                 <Line type="monotone" dataKey="wqiScore" stroke="#10b981" strokeWidth={2} dot={false} name="WQI Score (0-100)" />
                 <Line type="monotone" dataKey="tds" stroke="#0284c7" strokeWidth={1.5} dot={false} name="TDS (ppm)" />
@@ -579,82 +641,84 @@ export const PurifierDetailPage: React.FC = () => {
       </div>
 
       {/* Schedule Maintenance Modal */}
-      {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
-                Schedule Maintenance Service
-              </h3>
-              <button
-                onClick={() => setIsScheduleModalOpen(false)}
-                className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleScheduleSubmit} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Purifier Unit
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`${purifier.purifierCode} - ${purifier.name}`}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Service Type
-                </label>
-                <select
-                  value={scheduleData.type}
-                  onChange={(e) => setScheduleData({ ...scheduleData, type: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
-                >
-                  <option value="FILTER_REPLACEMENT">Filter Cartridge & RO Replacement</option>
-                  <option value="MEMBRANE_FLUSH">Membrane Flush & Sanitization</option>
-                  <option value="ROUTINE_CHECKUP">Routine Diagnostic Checkup</option>
-                  <option value="SENSOR_CALIBRATION">Sensor Probe Calibration</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Work Order Notes
-                </label>
-                <textarea
-                  rows={3}
-                  value={scheduleData.notes}
-                  onChange={(e) => setScheduleData({ ...scheduleData, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+      {isScheduleModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
+                  Schedule Maintenance Service
+                </h3>
                 <button
-                  type="button"
                   onClick={() => setIsScheduleModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
-                >
-                  Confirm Work Order
+                  ✕
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleScheduleSubmit} className="space-y-4 text-xs font-sans">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Purifier Unit
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${purifier.purifierCode} - ${purifier.name}`}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Service Type
+                  </label>
+                  <select
+                    value={scheduleData.type}
+                    onChange={(e) => setScheduleData({ ...scheduleData, type: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="FILTER_REPLACEMENT">Filter Cartridge & RO Replacement</option>
+                    <option value="MEMBRANE_FLUSH">Membrane Flush & Sanitization</option>
+                    <option value="ROUTINE_CHECKUP">Routine Diagnostic Checkup</option>
+                    <option value="SENSOR_CALIBRATION">Sensor Probe Calibration</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Work Order Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={scheduleData.notes}
+                    onChange={(e) => setScheduleData({ ...scheduleData, notes: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsScheduleModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                  >
+                    Confirm Work Order
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

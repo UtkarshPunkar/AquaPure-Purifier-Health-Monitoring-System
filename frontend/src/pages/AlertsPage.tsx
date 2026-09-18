@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTelemetry } from '../context/TelemetryContext';
 import { api } from '../api/client';
 import { AlertItem } from '../types';
@@ -287,73 +288,75 @@ export const AlertsPage: React.FC = () => {
       </div>
 
       {/* Assign Technician Modal */}
-      {assignModalAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 max-w-sm w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
-                Assign Maintenance Technician
-              </h3>
-              <button
-                onClick={() => setAssignModalAlert(null)}
-                className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {assignSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
-                <CheckCircle2 size={16} className="shrink-0" />
-                <span>Technician assigned & dispatch notification sent!</span>
+      {assignModalAlert &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 max-w-sm w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Wrench size={16} className="text-sky-600 dark:text-sky-400" />
+                  Assign Maintenance Technician
+                </h3>
+                <button
+                  onClick={() => setAssignModalAlert(null)}
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                >
+                  <X size={18} />
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleAssignSubmit} className="space-y-3.5 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Alert Incident
-                  </label>
-                  <p className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium">
-                    {assignModalAlert.title}
-                  </p>
-                </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Select Technician
-                  </label>
-                  <select
-                    value={technicianName}
-                    onChange={(e) => setTechnicianName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
-                  >
-                    <option value="Rajesh Sharma">Rajesh Sharma (Senior HVAC & Water Tech)</option>
-                    <option value="Vikram Singh">Vikram Singh (Membrane Specialist)</option>
-                    <option value="Vedant Bhanarkar">Vedant Bhanarkar (Technical Lead)</option>
-                  </select>
+              {assignSuccess ? (
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle2 size={16} className="shrink-0" />
+                  <span>Technician assigned & dispatch notification sent!</span>
                 </div>
+              ) : (
+                <form onSubmit={handleAssignSubmit} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Alert Incident
+                    </label>
+                    <p className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium">
+                      {assignModalAlert.title}
+                    </p>
+                  </div>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAssignModalAlert(null)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
-                  >
-                    Confirm Dispatch
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Select Technician
+                    </label>
+                    <select
+                      value={technicianName}
+                      onChange={(e) => setTechnicianName(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
+                    >
+                      <option value="Rajesh Sharma">Rajesh Sharma (Senior HVAC & Water Tech)</option>
+                      <option value="Vikram Singh">Vikram Singh (Membrane Specialist)</option>
+                      <option value="Vedant Bhanarkar">Vedant Bhanarkar (Technical Lead)</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssignModalAlert(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                    >
+                      Confirm Dispatch
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

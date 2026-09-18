@@ -24,3 +24,11 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+

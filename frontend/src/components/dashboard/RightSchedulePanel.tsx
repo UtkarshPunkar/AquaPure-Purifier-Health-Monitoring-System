@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTelemetry } from '../../context/TelemetryContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -779,107 +780,109 @@ export const RightSchedulePanel: React.FC = () => {
       </div>
 
       {/* Minimal Add Filter Clean Log Modal */}
-      {isAddCleanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-up p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-sky-500" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Add Filter Clean Log
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsAddCleanModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 interactive-btn"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddCleanLog} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Purifier Unit
-                </label>
-                <select
-                  value={newLogData.purifierCode}
-                  onChange={(e) => setNewLogData({ ...newLogData, purifierCode: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs"
-                >
-                  {purifiers.map((p) => (
-                    <option key={p.id} value={p.purifierCode}>
-                      {p.purifierCode} - {p.name} ({p.building})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Cleaning / Maintenance Action
-                </label>
-                <input
-                  type="text"
-                  value={newLogData.action}
-                  onChange={(e) => setNewLogData({ ...newLogData, action: e.target.value })}
-                  placeholder="e.g. RO Membrane Flush & UV Chamber Clean"
-                  required
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs"
-                />
-                {/* Quick Presets */}
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {[
-                    'RO Membrane Flush',
-                    'Carbon Filter Clean',
-                    'UV Chamber Sterilization',
-                    'Sediment Cartridge Clean',
-                  ].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setNewLogData({ ...newLogData, action: preset })}
-                      className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950 text-[10px] text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                    >
-                      + {preset}
-                    </button>
-                  ))}
+      {isAddCleanModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-up p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-sky-500" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Add Filter Clean Log
+                  </h3>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Health Restored (%)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={newLogData.healthRestored}
-                  onChange={(e) => setNewLogData({ ...newLogData, healthRestored: Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
                 <button
-                  type="button"
                   onClick={() => setIsAddCleanModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 interactive-btn"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
-                >
-                  Save Clean Log
+                  <X size={16} />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleAddCleanLog} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Purifier Unit
+                  </label>
+                  <select
+                    value={newLogData.purifierCode}
+                    onChange={(e) => setNewLogData({ ...newLogData, purifierCode: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs"
+                  >
+                    {purifiers.map((p) => (
+                      <option key={p.id} value={p.purifierCode}>
+                        {p.purifierCode} - {p.name} ({p.building})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Cleaning / Maintenance Action
+                  </label>
+                  <input
+                    type="text"
+                    value={newLogData.action}
+                    onChange={(e) => setNewLogData({ ...newLogData, action: e.target.value })}
+                    placeholder="e.g. RO Membrane Flush & UV Chamber Clean"
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs"
+                  />
+                  {/* Quick Presets */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      'RO Membrane Flush',
+                      'Carbon Filter Clean',
+                      'UV Chamber Sterilization',
+                      'Sediment Cartridge Clean',
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setNewLogData({ ...newLogData, action: preset })}
+                        className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950 text-[10px] text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                      >
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Health Restored (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={newLogData.healthRestored}
+                    onChange={(e) => setNewLogData({ ...newLogData, healthRestored: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddCleanModalOpen(false)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                  >
+                    Save Clean Log
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Manage Account & Password Modal */}
       <ManageAccountModal

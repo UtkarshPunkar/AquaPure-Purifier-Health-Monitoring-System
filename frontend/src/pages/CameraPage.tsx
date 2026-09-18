@@ -307,13 +307,12 @@ export const CameraPage: React.FC = () => {
 
               <button
                 onClick={handleCaptureSnapshot}
-                disabled={isCapturing || !isOnline}
-                className={`primary-button flex items-center space-x-2 text-xs py-2 px-4 ${
-                  !isOnline ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                disabled={isCapturing}
+                className="primary-button flex items-center space-x-2 text-xs py-2 px-4 shadow-sm hover:shadow"
+                title="Capture live frame and run AI optical inspection"
               >
                 <Camera size={14} className={isCapturing ? 'animate-spin' : ''} />
-                <span>{isCapturing ? 'Capturing...' : 'Capture Inspection Frame'}</span>
+                <span>{isCapturing ? 'Analyzing Frame...' : 'Capture Inspection Frame (AI)'}</span>
               </button>
             </div>
           </div>
@@ -401,19 +400,62 @@ export const CameraPage: React.FC = () => {
 
           {/* AI Detection Summary Card (if snapshot taken) */}
           {snapshotResult && (
-            <div className="app-card p-4 space-y-2 border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400">
+            <div
+              className={`app-card p-4 space-y-2 border transition-all animate-in fade-in ${
+                snapshotResult.riskLevel === 'CRITICAL'
+                  ? 'border-rose-500/50 bg-rose-50/70 dark:bg-rose-950/30 shadow-md shadow-rose-500/10'
+                  : snapshotResult.riskLevel === 'WARNING'
+                  ? 'border-amber-500/50 bg-amber-50/70 dark:bg-amber-950/30 shadow-md shadow-amber-500/10'
+                  : 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+              }`}
+            >
+              <div
+                className={`flex items-center justify-between text-xs font-bold ${
+                  snapshotResult.riskLevel === 'CRITICAL'
+                    ? 'text-rose-700 dark:text-rose-400'
+                    : snapshotResult.riskLevel === 'WARNING'
+                    ? 'text-amber-700 dark:text-amber-400'
+                    : 'text-emerald-700 dark:text-emerald-400'
+                }`}
+              >
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} /> AI Optical Inspection Result
+                  {snapshotResult.riskLevel === 'SAFE' ? (
+                    <CheckCircle2 size={14} />
+                  ) : (
+                    <AlertCircle size={14} />
+                  )}
+                  <span>AI Optical Inspection Result</span>
                 </span>
                 <span className="font-mono">{snapshotResult.confidence}% Conf.</span>
               </div>
-              <div className="text-xs font-semibold app-heading">
-                {snapshotResult.detectedObject}
+
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  {snapshotResult.detectedObject}
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    snapshotResult.riskLevel === 'CRITICAL'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                      : snapshotResult.riskLevel === 'WARNING'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
+                  }`}
+                >
+                  {snapshotResult.riskLevel}
+                </span>
               </div>
+
               <p className="text-[11px] app-muted leading-relaxed">
                 {snapshotResult.recommendation}
               </p>
+
+              {snapshotResult.boundingBoxes && snapshotResult.boundingBoxes.length > 0 && (
+                <div className="text-[10px] font-mono text-rose-600 dark:text-rose-400 pt-1 border-t border-rose-200 dark:border-rose-900/50 flex items-center justify-between">
+                  <span>Detected Contaminant ROIs:</span>
+                  <span className="font-bold">{snapshotResult.boundingBoxes.length} Active Bounding Box(es)</span>
+                </div>
+              )}
             </div>
           )}
 

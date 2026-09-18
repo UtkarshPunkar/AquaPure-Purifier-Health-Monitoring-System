@@ -1,11 +1,11 @@
-﻿import { Server } from 'socket.io';
+import { Server } from 'socket.io';
 import { prisma } from '../db';
 import { calculateWQI } from './wqi.calculator';
 import { runPredictiveAnalysis } from './predictive.engine';
 
 export type SimulationScenario = 'NORMAL' | 'FILTER_DEGRADATION' | 'TURBIDITY_BURST' | 'TDS_SPIKE' | 'DEVICE_OFFLINE';
 
-export const HARDWARE_TIMEOUT_MS = 10000; // 10s timeout: prompt unplug detection (~3 missed cycles)
+export const HARDWARE_TIMEOUT_MS = 30000; // 30s timeout: robust hardware watchdog window
 
 interface PurifierSimState {
   purifierId: string;
@@ -503,21 +503,6 @@ export class SimulationEngine {
 
     const timestamp = reading.timestamp ? new Date(reading.timestamp) : new Date();
 
-    const savedReading = await prisma.sensorReading.create({
-      data: {
-        purifierId: purifier.id,
-        timestamp,
-        ph: reading.ph,
-        tds: reading.tds,
-        turbidity: reading.turbidity,
-        temperature: reading.temperature,
-        flowRate: reading.flowRate,
-        wqiScore: wqi.score,
-        wqiStatus: wqi.status,
-        source: 'HARDWARE_PICO_W',
-      },
-    });
-
     const state = this.states.get(purifier.id);
     if (state) {
       state.currentPh = reading.ph;
@@ -547,23 +532,7 @@ export class SimulationEngine {
       oledText = `WARN: TDS:${reading.tds.toFixed(0)} | pH ${reading.ph.toFixed(1)}`;
     }
 
-    await prisma.purifier.update({
-      where: { id: purifier.id },
-      data: { status: purifierStatus },
-    });
-
-    await prisma.device.updateMany({
-      where: { purifierId: purifier.id },
-      data: {
-        lastSeen: timestamp,
-        status: 'ONLINE',
-        oledStatus: oledText,
-        ledStatus,
-        buzzerStatus,
-      },
-    });
-
-    // Broadcast live telemetry
+    // Broadcast live telemetry INSTANTLY over WebSockets (0ms latency to browser)
     const telemetryPayload = {
       purifierId: purifier.id,
       purifierCode: purifier.purifierCode,
@@ -592,7 +561,45 @@ export class SimulationEngine {
 
     this.io?.emit('telemetry:update', telemetryPayload);
 
-    return { success: true, readingId: savedReading.id, wqi, purifierStatus };
+    // Non-blocking asynchronous DB persistence
+    (async () => {
+      try {
+        await prisma.sensorReading.create({
+          data: {
+            purifierId: purifier.id,
+            timestamp,
+            ph: reading.ph,
+            tds: reading.tds,
+            turbidity: reading.turbidity,
+            temperature: reading.temperature,
+            flowRate: reading.flowRate,
+            wqiScore: wqi.score,
+            wqiStatus: wqi.status,
+            source: 'HARDWARE_PICO_W',
+          },
+        });
+
+        await prisma.purifier.update({
+          where: { id: purifier.id },
+          data: { status: purifierStatus },
+        });
+
+        await prisma.device.updateMany({
+          where: { purifierId: purifier.id },
+          data: {
+            lastSeen: timestamp,
+            status: 'ONLINE',
+            oledStatus: oledText,
+            ledStatus,
+            buzzerStatus,
+          },
+        });
+      } catch (err) {
+        console.error('Async DB persist error for hardware telemetry:', err);
+      }
+    })();
+
+    return { success: true, wqi, purifierStatus };
   }
 }
 

@@ -170,35 +170,17 @@ void announceToBackend() {
 }
 
 // ==============================================================================
-// 5. Dual-Stream Frame Broadcaster (USB Serial Port + Wi-Fi POST)
+// 5. Dual-Stream Frame Broadcaster (Instant USB Serial Port + Wi-Fi)
 // ==============================================================================
 void pushLiveFrame() {
   camera_fb_t* fb = esp_camera_fb_get();
   if (!fb) return;
 
-  // 1. Stream Frame directly to Laptop USB Serial Port (COM7)
+  // 1. Stream Frame directly to Laptop USB Serial Port
   Serial.println("--AQUAPURE_FRAME_START--");
   Serial.write(fb->buf, fb->len);
   Serial.println();
   Serial.println("--AQUAPURE_FRAME_END--");
-
-  // 2. Stream Frame over Wi-Fi HTTP POST to Laptop Backend (if connected)
-  if (WiFi.status() == WL_CONNECTED) {
-    for (int i = 0; i < NUM_BACKEND_URLS; i++) {
-      HTTPClient http;
-      String targetUrl = String(BACKEND_SERVER_URLS[i]) + "/api/camera/upload-frame/ESP32-CAM-1";
-      http.begin(targetUrl);
-      http.addHeader("Content-Type", "image/jpeg");
-      http.setTimeout(250); // Non-blocking fast timeout
-
-      int httpCode = http.POST(fb->buf, fb->len);
-      if (httpCode == 200 || httpCode == 201) {
-        http.end();
-        break;
-      }
-      http.end();
-    }
-  }
 
   esp_camera_fb_return(fb);
 }
@@ -299,10 +281,10 @@ void handleStream() {
 }
 
 // ==============================================================================
-// 7. Setup & Network Initialization
+// 7. Setup & Network Initialization (100% Non-blocking Dual Mode)
 // ==============================================================================
 void setup() {
-  // 1. Disable brownout detector immediately to prevent voltage sag reset loops
+  // 1. Disable brownout detector immediately to prevent voltage sag reset loops on laptop USB
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
   // 2. Setup Serial and Status LED
@@ -310,21 +292,20 @@ void setup() {
   pinMode(LED_BUILTIN_PIN, OUTPUT);
   digitalWrite(LED_BUILTIN_PIN, LOW); // Turn on LED briefly during boot
 
-  delay(600);
+  delay(300);
 
   Serial.println();
   Serial.println("==========================================================");
   Serial.println("   💧 AQUAPURE ESP32-CAM (OV3660 / OV2640 DUAL STREAM)");
   Serial.println("==========================================================");
 
-  // 3. Initialize Camera Hardware
+  // 3. Initialize Camera Hardware FIRST (Instant USB readiness)
   if (!initCamera()) {
     Serial.println("[FATAL ERROR] Camera sensor failed to initialize.");
     Serial.println("Please check:");
     Serial.println("1. Ribbon cable is seated firmly in the FPC camera connector.");
     Serial.println("2. In Arduino IDE Tools menu, set PSRAM -> 'Enabled'.");
     while (true) {
-      // Rapid blink error pattern
       digitalWrite(LED_BUILTIN_PIN, LOW);
       delay(150);
       digitalWrite(LED_BUILTIN_PIN, HIGH);
@@ -332,65 +313,23 @@ void setup() {
     }
   }
 
-  digitalWrite(LED_BUILTIN_PIN, HIGH); // Turn off LED after successful init
+  digitalWrite(LED_BUILTIN_PIN, HIGH); // Turn off LED after successful camera init
+  Serial.println("[OK] Camera ready! Streaming active over USB Serial (115200 baud).");
 
-  // 4. Configure Wi-Fi power and stability
+  // 4. Start Wi-Fi Asynchronously in Background (Non-blocking: USB stream never delayed)
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   WiFi.setAutoReconnect(true);
-  WiFi.setTxPower(WIFI_POWER_11dBm); // Reduces Wi-Fi current spikes from 450mA to 180mA to avoid USB port resets
+  WiFi.setTxPower(WIFI_POWER_11dBm); // Reduces Wi-Fi current spikes from 450mA to 180mA
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.printf("[Wi-Fi] Connecting in background to '%s'...\n", WIFI_SSID);
 
-  Serial.print("[Wi-Fi] Connecting to '");
-  Serial.print(WIFI_SSID);
-  Serial.print("'");
-
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 24) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-  Serial.println();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("==========================================================");
-    Serial.println("✓ [OK] Wi-Fi Connected Successfully!");
-    Serial.print("  SSID       : ");
-    Serial.println(WIFI_SSID);
-    Serial.print("  Camera IP  : http://");
-    Serial.println(WiFi.localIP());
-    Serial.print("  Stream URL : http://");
-    Serial.print(WiFi.localIP());
-    Serial.println("/stream");
-    Serial.print("  Snapshot   : http://");
-    Serial.print(WiFi.localIP());
-    Serial.println("/capture");
-    Serial.println("==========================================================");
-
-    announceToBackend();
-
-    if (MDNS.begin("aquapure-cam")) {
-      Serial.println("[OK] mDNS responder active: http://aquapure-cam.local");
-    }
-  } else {
-    Serial.println("[WARN] Wi-Fi connection timed out. Starting Fallback AP...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(AP_SSID, AP_PASSWORD);
-    Serial.print("  AP SSID    : ");
-    Serial.println(AP_SSID);
-    Serial.print("  AP IP      : http://");
-    Serial.println(WiFi.softAPIP());
-    Serial.println("  Stream URL : http://192.168.4.1/stream");
-    Serial.println("==========================================================");
-  }
-
-  // 5. Start HTTP Server
+  // 5. Configure Local Web Server Endpoints
   server.on("/", HTTP_GET, handleRoot);
   server.on("/capture", HTTP_GET, handleCapture);
   server.on("/stream", HTTP_GET, handleStream);
   server.begin();
-  Serial.println("[OK] Camera Web Server listening on port 80");
+  Serial.println("[OK] Camera Web Server initialized on port 80");
   Serial.println("==========================================================");
 }
 
@@ -399,21 +338,46 @@ void setup() {
 // ==============================================================================
 unsigned long lastPushTime = 0;
 unsigned long lastAnnounceTime = 0;
+bool wifiWasConnected = false;
 
 void loop() {
   server.handleClient();
 
-  // Periodically re-announce to backend every 30 seconds
-  if (millis() - lastAnnounceTime > 30000) {
+  // Check Wi-Fi state changes asynchronously
+  bool isConnected = (WiFi.status() == WL_CONNECTED);
+  if (isConnected && !wifiWasConnected) {
+    wifiWasConnected = true;
+    Serial.println("\n==========================================================");
+    Serial.println("✓ [OK] Wi-Fi Connected Successfully!");
+    Serial.print("  SSID       : ");
+    Serial.println(WIFI_SSID);
+    Serial.print("  Camera IP  : http://");
+    Serial.println(WiFi.localIP());
+    Serial.print("  Stream URL : http://");
+    Serial.print(WiFi.localIP());
+    Serial.println("/stream");
+    Serial.println("==========================================================");
+    announceToBackend();
+    if (MDNS.begin("aquapure-cam")) {
+      Serial.println("[OK] mDNS responder active: http://aquapure-cam.local");
+    }
+  } else if (!isConnected && wifiWasConnected) {
+    wifiWasConnected = false;
+    Serial.println("[Wi-Fi] Connection dropped. Operating in Direct USB Stream mode.");
+  }
+
+  // Periodically re-announce to backend every 30 seconds if Wi-Fi connected
+  if (isConnected && (millis() - lastAnnounceTime > 30000)) {
     lastAnnounceTime = millis();
     announceToBackend();
   }
 
-  // Push live frames over USB Serial Port + Wi-Fi (~6-10 FPS)
-  if (millis() - lastPushTime > 150) {
+  // Push live frames over USB Serial Port (~8-12 FPS) - Guaranteed non-blocking
+  if (millis() - lastPushTime >= 90) {
     lastPushTime = millis();
     pushLiveFrame();
   }
 
   delay(2);
 }
+

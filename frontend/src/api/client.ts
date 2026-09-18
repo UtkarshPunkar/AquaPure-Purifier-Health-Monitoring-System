@@ -147,8 +147,8 @@ export const api = {
     const res = await apiClient.get('/ai-detections');
     return res.data;
   },
-  runAiScan: async (purifierId: string, sampleType?: string): Promise<{ message: string; scanResult: AiDetectionItem }> => {
-    const res = await apiClient.post('/ai-detections/scan', { purifierId, sampleType });
+  runAiScan: async (purifierId: string, sampleType?: string, image?: string): Promise<{ message: string; scanResult: AiDetectionItem }> => {
+    const res = await apiClient.post('/ai-detections/scan', { purifierId, sampleType, image });
     return res.data;
   },
 

@@ -813,7 +813,7 @@ html.dark .dashboard-glow-orb {
 
 /* Page Transition Container */
 .page-enter {
-  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Scroll Reveal States */

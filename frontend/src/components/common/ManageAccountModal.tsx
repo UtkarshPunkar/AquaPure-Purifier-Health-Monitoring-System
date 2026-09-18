@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   X,
@@ -144,7 +145,7 @@ export const ManageAccountModal: React.FC<ManageAccountModalProps> = ({ isOpen, 
   const roleInfo = getRoleBadge(user?.role);
   const RoleIcon = roleInfo.icon;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white dark:bg-slate-900 max-w-lg w-full rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-up">
         {/* Modal Header */}
@@ -446,6 +447,7 @@ export const ManageAccountModal: React.FC<ManageAccountModalProps> = ({ isOpen, 
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
